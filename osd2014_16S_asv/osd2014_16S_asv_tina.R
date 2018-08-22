@@ -1,6 +1,5 @@
 source("osd2014_16S_asv/lib/functions_com_sim.R")
-load("~/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata")
-load("~/osd2014_sparcc_filtered.Rda")
+
 # Load Packages
 library("tidyverse")
 library("foreach")
@@ -22,6 +21,46 @@ library("ape")
 library("phyloseq")
 library("vegan")
 library("RColorBrewer")
+
+
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_16S_asv_pina_tina.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_pina_tina.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# If downloaded file at osd2014_16S_asv/data/ use:
+load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata")
+load("osd2014_16S_asv/data/osd2014_sparcc_filtered.Rdata")
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_sparcc_filtered.Rdata"), verbose = TRUE)
+
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
+
 
 PARAM <- list();
 PARAM$cor.use <- "na.or.complete";
@@ -241,8 +280,14 @@ for (t in seq(start.t, length(get.cs))) {
   gc();
 }
 ############################
-get.cs
 
-save.image("~/osd2014_16S_tina.Rdata")
+pina_tina_results <- get.cs
+
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
+save(pina_tina_results, file = "osd2014_16S_asv/data/osd2014_16S_asv_pina_tina_results.Rdata")
+save.image("osd2014_16S_asv/data/osd2014_16S_asv_pina_tina.Rdata")
+# END: Save objects ------------------------------------------------------------
+
 
 

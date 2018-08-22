@@ -2,7 +2,42 @@ library(vegan)
 library(tidyverse)
 library(phyloseq)
 library(spaa)
+
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+
+# If downloaded file at osd2014_16S_asv/data/ use:
 load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
+
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
 
 osd2014_16s_otuXsample_physeq_filt_prev_beta_df <- as(otu_table(osd2014_dada2_phyloseq_beta), "matrix") %>% as.data.frame()
 
@@ -73,4 +108,8 @@ all_plot <- ggplot(results %>% select(mean_proportion, observed, sign) %>% uniqu
         legend.text.align=0) +
   scale_fill_manual(values = c("#588157", "#9A9A9A", "#3891A6"))
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image("osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata")
+# END: Save objects ------------------------------------------------------------
+

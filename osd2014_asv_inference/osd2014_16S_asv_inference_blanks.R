@@ -2,7 +2,7 @@ library(dada2); packageVersion("dada2")
 library(tidyverse)
 
 # File parsing
-wdir <- "/Volumes/Extra/dada_2014_blanks//"
+wdir <- "osd2014_asv_inference/data/dada_2014_blanks/"
 setwd(wdir)
 pathF <-  file.path(wdir, "files")
 pathR <- file.path(wdir, "files")
@@ -90,8 +90,8 @@ ggplot(track_long, aes(variable, value, fill = variable, color = variable)) +
   ylab("Number of sequences") +
   theme_bw()
 
-taxa <- assignTaxonomy(seqtab.nochim, "~/Downloads/silva_nr_v132_train_set.fa.gz", multithread=TRUE, tryRC = TRUE)
-taxa <- addSpecies(taxa, "~/Downloads/silva_species_assignment_v132.fa.gz")
+taxa <- assignTaxonomy(seqtab.nochim, "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz", multithread=TRUE, tryRC = TRUE)
+taxa <- addSpecies(taxa, "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz")
 taxa.print <- taxa # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)

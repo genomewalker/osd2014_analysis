@@ -2,7 +2,7 @@ library(dada2); packageVersion("dada2")
 library(tidyverse)
 
 # File parsing
-wdir <- "/Volumes/Extra/dada_2014/"
+wdir <- "osd2014_asv_inference/data/dada2_2014"
 setwd(wdir)
 pathF <-  file.path(wdir, "files")
 pathR <- file.path(wdir, "files")
@@ -90,8 +90,8 @@ ggplot(track_long, aes(variable, value, fill = variable, color = variable)) +
   ylab("Number of sequences") +
   theme_bw()
 
-taxa <- assignTaxonomy(seqtab.nochim, "~/Downloads/silva_nr_v132_train_set.fa.gz", multithread=TRUE, tryRC = TRUE)
-taxa <- addSpecies(taxa, "~/Downloads/silva_species_assignment_v132.fa.gz")
+taxa <- assignTaxonomy(seqtab.nochim, "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_nr_v132_train_set.fa.gz", multithread=TRUE, tryRC = TRUE)
+taxa <- addSpecies(taxa, "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz")
 taxa.print <- taxa # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)
@@ -185,90 +185,90 @@ dbWriteTable(con, c("osd_analysis", "osd2014_silva_dada2"), value=osd2014_silva_
 
 
 # Get non-merged reads ----------------------------------------------------
-library(tidyverse)
-library(phyloseq)
-library(dada2)
-library(purrr)
-load("osd2014_16S_asv/data/osd2014_16S_asv_inference.Rdata")
-
-concat <- mergePairs(dadaFs, derepFs, dadaRs, derepRs, verbose = TRUE, justConcatenate=TRUE)
-
-
-get_nonmerged <- function(X, merg = merg, conc = conc){
-m <- merg[[X]]
-cn <- conc[[X]]
-bind_cols(m, cn) %>% as_tibble() %>%
-  filter(accept == FALSE, nmatch == 0, nmismatch == 0, nindel == 0) %>%
-  mutate(sequence = sequence1, accept = TRUE) %>%
-  select(sequence, abundance, forward, reverse, nmatch, nmismatch, nindel, prefer, accept) %>%
-  as.data.frame()
-}
-
-get_nonmerged_fwd <- function(X, merg = merg, conc = conc){
-  m <- merg[[X]]
-  cn <- conc[[X]]
-  bind_cols(m, cn) %>% as_tibble() %>%
-    filter(accept == FALSE, nmatch == 0, nmismatch == 0, nindel == 0) %>%
-    separate(sequence1, into = c("R1", "R2"), sep = "NNNNNNNNNN", remove = FALSE) %>%
-    mutate(sequence = R1, accept = TRUE) %>%
-    select(sequence, abundance, forward, reverse, nmatch, nmismatch, nindel, prefer, accept) %>%
-    as.data.frame()
-}
-
-get_nonmerged_rev <- function(X, merg = merg, conc = conc){
-  m <- merg[[X]]
-  cn <- conc[[X]]
-  bind_cols(m, cn) %>% as_tibble() %>%
-    filter(accept == FALSE, nmatch == 0, nmismatch == 0, nindel == 0) %>%
-    separate(sequence1, into = c("R1", "R2"), sep = "NNNNNNNNNN", remove = FALSE) %>%
-    mutate(sequence = R2, accept = TRUE) %>%
-    select(sequence, abundance, forward, reverse, nmatch, nmismatch, nindel, prefer, accept) %>%
-    as.data.frame()
-}
-
-test_f <- lapply(names(mergers), get_nonmerged_fwd, merg = mergers, conc = concat)
-test_r <- lapply(names(mergers), get_nonmerged_rev, merg = mergers, conc = concat)
-
-names(test_r) <- names(mergers)
-#Construct sequence table
-seqtab_nm <- makeSequenceTable(test_r)
-dim(seqtab_nm)
-table(nchar(getSequences(seqtab_nm)))
-
-#Remove chimeras
-seqtab_nm.nochim <- removeBimeraDenovo(seqtab_nm, method = "consensus", multithread = 2, verbose = TRUE)
-dim(seqtab_nm.nochim)
-sum(seqtab_nm.nochim)/sum(seqtab_nm)
-
-#Track reads throughout the pipeline
-getN <- function(x) sum(getUniques(x))
-track <- cbind(ft, sapply(dadaFs, getN), sapply(mergers, getN), rowSums(seqtab), rowSums(seqtab.nochim))
-colnames(track) <- c("input", "filtered", "denoised", "merged", "tabled", "nonchim")
-rownames(track) <- sample.names
-head(track)
-
-track_long <- as.data.frame(track) %>%
-  rownames_to_column(var = "sample") %>%
-  gather(variable, value, -sample) %>%
-  tbl_df()
-
-track_long$variable <- factor(track_long$variable, levels = colnames(track))
-
-ggplot(track_long, aes(variable, value, fill = variable, color = variable)) +
-  #geom_bar(stat = "identity", position = "dodge") +
-  geom_jitter() +
-  scale_fill_brewer(palette="Paired") +
-  #facet_wrap(~sample, scales = "free_y") +
-  xlab("DADA2 steps") +
-  ylab("Number of sequences") +
-  theme_bw()
-
-taxa_nm <- assignTaxonomy(seqtab_nm.nochim, "~/Downloads/silva_nr_v132_train_set.fa.gz", multithread=2, tryRC = TRUE)
-taxa_nm <- addSpecies(taxa_nm, "~/Downloads/silva_species_assignment_v132.fa.gz")
-taxa_nm.print <- taxa_nm # Removing sequence rownames for display only
-rownames(taxa_nm.print) <- NULL
-head(taxa_nm.print)
-row.names(seqtab_nm.nochim) <- gsub("_R1.filt.fastq.gz", "", row.names(seqtab_nm.nochim))
-
-osd2014_dada2_phyloseq_nm <- phyloseq(otu_table(seqtab_nm.nochim, taxa_are_rows=FALSE), tax_table(as.matrix(taxa_nm)), sample_data(osd2014_cdata))
-
+# library(tidyverse)
+# library(phyloseq)
+# library(dada2)
+# library(purrr)
+# load("osd2014_16S_asv/data/osd2014_16S_asv_inference.Rdata")
+#
+# concat <- mergePairs(dadaFs, derepFs, dadaRs, derepRs, verbose = TRUE, justConcatenate=TRUE)
+#
+#
+# get_nonmerged <- function(X, merg = merg, conc = conc){
+# m <- merg[[X]]
+# cn <- conc[[X]]
+# bind_cols(m, cn) %>% as_tibble() %>%
+#   filter(accept == FALSE, nmatch == 0, nmismatch == 0, nindel == 0) %>%
+#   mutate(sequence = sequence1, accept = TRUE) %>%
+#   select(sequence, abundance, forward, reverse, nmatch, nmismatch, nindel, prefer, accept) %>%
+#   as.data.frame()
+# }
+#
+# get_nonmerged_fwd <- function(X, merg = merg, conc = conc){
+#   m <- merg[[X]]
+#   cn <- conc[[X]]
+#   bind_cols(m, cn) %>% as_tibble() %>%
+#     filter(accept == FALSE, nmatch == 0, nmismatch == 0, nindel == 0) %>%
+#     separate(sequence1, into = c("R1", "R2"), sep = "NNNNNNNNNN", remove = FALSE) %>%
+#     mutate(sequence = R1, accept = TRUE) %>%
+#     select(sequence, abundance, forward, reverse, nmatch, nmismatch, nindel, prefer, accept) %>%
+#     as.data.frame()
+# }
+#
+# get_nonmerged_rev <- function(X, merg = merg, conc = conc){
+#   m <- merg[[X]]
+#   cn <- conc[[X]]
+#   bind_cols(m, cn) %>% as_tibble() %>%
+#     filter(accept == FALSE, nmatch == 0, nmismatch == 0, nindel == 0) %>%
+#     separate(sequence1, into = c("R1", "R2"), sep = "NNNNNNNNNN", remove = FALSE) %>%
+#     mutate(sequence = R2, accept = TRUE) %>%
+#     select(sequence, abundance, forward, reverse, nmatch, nmismatch, nindel, prefer, accept) %>%
+#     as.data.frame()
+# }
+#
+# test_f <- lapply(names(mergers), get_nonmerged_fwd, merg = mergers, conc = concat)
+# test_r <- lapply(names(mergers), get_nonmerged_rev, merg = mergers, conc = concat)
+#
+# names(test_r) <- names(mergers)
+# #Construct sequence table
+# seqtab_nm <- makeSequenceTable(test_r)
+# dim(seqtab_nm)
+# table(nchar(getSequences(seqtab_nm)))
+#
+# #Remove chimeras
+# seqtab_nm.nochim <- removeBimeraDenovo(seqtab_nm, method = "consensus", multithread = 2, verbose = TRUE)
+# dim(seqtab_nm.nochim)
+# sum(seqtab_nm.nochim)/sum(seqtab_nm)
+#
+# #Track reads throughout the pipeline
+# getN <- function(x) sum(getUniques(x))
+# track <- cbind(ft, sapply(dadaFs, getN), sapply(mergers, getN), rowSums(seqtab), rowSums(seqtab.nochim))
+# colnames(track) <- c("input", "filtered", "denoised", "merged", "tabled", "nonchim")
+# rownames(track) <- sample.names
+# head(track)
+#
+# track_long <- as.data.frame(track) %>%
+#   rownames_to_column(var = "sample") %>%
+#   gather(variable, value, -sample) %>%
+#   tbl_df()
+#
+# track_long$variable <- factor(track_long$variable, levels = colnames(track))
+#
+# ggplot(track_long, aes(variable, value, fill = variable, color = variable)) +
+#   #geom_bar(stat = "identity", position = "dodge") +
+#   geom_jitter() +
+#   scale_fill_brewer(palette="Paired") +
+#   #facet_wrap(~sample, scales = "free_y") +
+#   xlab("DADA2 steps") +
+#   ylab("Number of sequences") +
+#   theme_bw()
+#
+# taxa_nm <- assignTaxonomy(seqtab_nm.nochim, "~/Downloads/silva_nr_v132_train_set.fa.gz", multithread=2, tryRC = TRUE)
+# taxa_nm <- addSpecies(taxa_nm, "~/Downloads/silva_species_assignment_v132.fa.gz")
+# taxa_nm.print <- taxa_nm # Removing sequence rownames for display only
+# rownames(taxa_nm.print) <- NULL
+# head(taxa_nm.print)
+# row.names(seqtab_nm.nochim) <- gsub("_R1.filt.fastq.gz", "", row.names(seqtab_nm.nochim))
+#
+# osd2014_dada2_phyloseq_nm <- phyloseq(otu_table(seqtab_nm.nochim, taxa_are_rows=FALSE), tax_table(as.matrix(taxa_nm)), sample_data(osd2014_cdata))
+#

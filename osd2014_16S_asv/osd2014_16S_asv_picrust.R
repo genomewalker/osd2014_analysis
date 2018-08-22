@@ -1,13 +1,46 @@
-
 # Prepare data for PICRUST ------------------------------------------------
+
+# Modified from https://github.com/vmaffei/dada2_to_picrust ---------------
+
 
 # Dependencies: ShortRead & biom
 library(ShortRead)
 library(biom) # note: use Joey's biom latest dev version; library(devtools); install_github("joey711/biom");
 library(phyloseq)
+library(ggpol)
 # 1) Make study db
 # grab study seqs
-load(file = "osd2014_16S_asv/data/osd2014_16S_seqtabnochim.Rdata")
+
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
+my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+osd2014_read_ko20140317_abun <- tbl(my_db, "osd2014_read_ko20140317_abun") %>%
+  collect(n = Inf)
+
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load(file = "osd2014_16S_asv/data/osd2014_16S_seqtabnochim.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata", verbose = TRUE)
+load("osd2014_shotgun/data/osd2014_read_ko20140317_abun.Rdata", verbose = TRUE)
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_seqtabnochim.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_shotgun/data/osd2014_read_ko20140317_abun.Rdata"), verbose = TRUE)
+
+# Load necessary data -----------------------------------------------------
+
+
 seqs_study <- colnames(seqtab.nochim)
 ids_study <- paste("study", 1:ncol(seqtab.nochim), sep = "_")
 # merge db and study seqs
@@ -17,6 +50,7 @@ fasta <- ShortRead(sread = DNAStringSet(db_out$seqs), id = BStringSet(db_out$ids
 writeFasta(fasta, file = "osd2014_16S_asv/data/gg_13_5_study_db.fasta.pre")
 # filter sequences that diverge from gg_13_5 by 97%
 # depending on how well greengenes covers your study sequences, consider reducing 97% to 70 or 50%
+# You will need vsearch installed
 system('vsearch --usearch_global osd2014_16S_asv/data/gg_13_5_study_db.fasta.pre --db osd2014_16S_asv/data/97_otus.fasta --matched osd2014_16S_asv/data/gg_13_5_study_db.fasta --id 0.90')
 id_filtered <- as.character(id(readFasta("osd2014_16S_asv/data/gg_13_5_study_db.fasta")))
 db_out_filt <- db_out[db_out$ids%in%id_filtered,]
@@ -70,14 +104,20 @@ categorize_by_function.py -i meta_counts_asr.biom -o cat_2_counts_asr.biom -c KE
 
 
 # Process PICRUST results -------------------------------------------------
-library(biom)
+library(biomformat)
 library(phyloseq)
 library(tidyverse)
 library(Hmisc)
 source("https://gist.githubusercontent.com/genomewalker/8abc47a044f0ac98b7392bbef8afcffa/raw/f4cc661bc3c7db5998b89d01006f710b1eb936d0/geom_flat_violin.R")
 
 # Read results
+# If downloaded file at osd2014_16S_asv/data/ use:
 ko_picrust <- as.matrix(biom_data(read_biom("osd2014_16S_asv/data/meta_counts_asr.biom")))
+
+# If remote use
+download.file("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/meta_counts_asr.biom", destfile = "osd2014_16S_asv/data/meta_counts_asr.biom")
+ko_picrust <- as.matrix(biom_data(read_biom("osd2014_16S_asv/data/meta_counts_asr.biom")))
+
 
 
 ko_picrust <- phyloseq(otu_table = otu_table(ko_picrust, taxa_are_rows = T))
@@ -93,7 +133,6 @@ ko_picrust_prop_long <- psmelt(ko_picrust_prop) %>% as_tibble() %>%
 # Run TAX4fun -------------------------------------------------------------
 
 library(themetagenomics)
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata", verbose = TRUE)
 
 osd2014_t4fun <- list()
 osd2014_t4fun$ABUND <- as(otu_table(osd2014_dada2_phyloseq_all, taxa_are_rows = TRUE), "matrix")
@@ -112,10 +151,6 @@ system.time(FUNCTIONS <- t4f(osd2014_t4fun$ABUND,rows_are_taxa=FALSE,tax_table=o
 ko_tax4fun_prop_long <- FUNCTIONS$fxn_table %>% as.data.frame() %>% rownames_to_column("label") %>% gather(ko, prop_t4f, -label) %>% as_tibble()
 
 
-# Get shotgun KO results
-my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
-osd2014_read_ko20140317_abun <- tbl(my_db, "osd2014_read_ko20140317_abun") %>%
-  collect(n = Inf)
 
 
 osd2014_read_ko20140317_abun_prop <- osd2014_read_ko20140317_abun %>%
@@ -132,11 +167,7 @@ osd2014_read_ko20140317_abun_prop %>%
   do(rcorr(.$prop, .$prop_picrust, "spearman") %>% broom::tidy()) %>%
   ungroup() %>%
   ggplot(aes("A", y = estimate)) +
-  geom_flat_violin(scale = "count", trim = FALSE) +
-  stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1),
-               geom = "pointrange", position = position_nudge(0.05)) +
-  geom_dotplot(binaxis = "y", dotsize = 0.5, stackdir = "down",
-               position = position_nudge(-0.025)) +
+  geom_boxjitter(outlier.color = NA, jitter.shape = 21, errorbar.draw = TRUE, width = 0.2, jitter.colour = "black", fill = "#103C54", alpha = 0.7) +
   theme(legend.position = "none") +
   ylab(expression(Spearman~rho)) +
   xlab("") +
@@ -153,11 +184,7 @@ osd2014_read_ko20140317_abun_prop %>%
   do(rcorr(.$prop, .$prop_t4f, "spearman") %>% broom::tidy()) %>%
   ungroup() %>%
   ggplot(aes("A", y = estimate)) +
-  geom_flat_violin(scale = "count", trim = FALSE) +
-  stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1),
-               geom = "pointrange", position = position_nudge(0.05)) +
-  geom_dotplot(binaxis = "y", dotsize = 0.5, stackdir = "down",
-               position = position_nudge(-0.025)) +
+  geom_boxjitter(outlier.color = NA, jitter.shape = 21, errorbar.draw = TRUE, width = 0.2, jitter.colour = "black", fill = "#103C54", alpha = 0.7) +
   theme(legend.position = "none") +
   ylab(expression(Spearman~rho)) +
   xlab("") +

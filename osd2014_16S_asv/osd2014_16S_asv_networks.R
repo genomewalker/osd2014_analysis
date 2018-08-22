@@ -5,12 +5,32 @@ library(tidyverse)
 library(tidygraph)
 library(ggraph)
 source("osd2014_16S_asv/lib/graph_lib.R")
-load("osd2014_16S_asv/data/osd2014_16S_asv_networks.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
 
-rm(osd2014_16S_asv_se_gl_minus2)
-rm(osd2014_16S_asv_se_mb_minus3)
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
 osd2014_silva_dada2_names <- tbl(my_db, "osd2014_silva_dada2") %>%
@@ -31,6 +51,70 @@ osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
   filter(label %in% osd2014_amp_mg_intersect$label) %>%
   left_join(osd2014_sample_cohesion) %>%
   arrange(match(label, st_100_order_terrestrial$label))
+
+osd2014_mld_adata <- tbl(my_db, "osd2014_mld_data") %>%
+  collect(n = Inf) %>%
+  dplyr::rename(label = osd_id) %>%
+  select(label, mld) %>%
+  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
+
+osd2014_phenology_adata <- tbl(my_db, "osd2014_phenology_data") %>%
+  collect(n = Inf) %>%
+  dplyr::rename(label = osd_id) %>%
+  select(label, pp_8d_0.5) %>%
+  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
+
+osd2014_satellite_adata <- tbl(my_db, "osd2014_satellite_data") %>%
+  collect(n = Inf) %>%
+  dplyr::rename(label = osd_id) %>%
+  select(label, chlor_a_8d, par_8d, poc_8d, KD490_8d) %>%
+  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
+
+osd2014_woa13_adata <- tbl(my_db, "osd2014_woa13_data") %>%
+  collect(n = Inf) %>%
+  dplyr::rename(label = osd_id) %>%
+  select(-long_woa13, -lat_woa13) %>%
+  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
+
+osd2014_iron_adata <- tbl(my_db, "osd2014_iron_data") %>%
+  collect(n = Inf) %>%
+  dplyr::rename(label = osd_id) %>%
+  select(label, iron) %>%
+  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
+
+osd2014_rescaled_2013_median_long <- tbl(my_db, "osd2014_halpern_scaled_median") %>%
+  collect(n = Inf) %>%
+  filter(buffer == "1km") %>%
+  select(-buffer) %>%
+  spread(ohi_variable, median, fill =0) %>%
+  select(-global_cumul_impact, -global_cumul_impact_diff_2008)
+
+
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load("osd2014_16S_asv/data/osd2014_16S_asv_networks.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata_networks.Rdata", verbose = TRUE)
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_networks.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata"), verbose = TRUE)
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata_networks.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
+rm(osd2014_16S_asv_se_gl_minus2)
+rm(osd2014_16S_asv_se_mb_minus3)
+
+
 
 osd2014_sparcc_g <- osd2014_sparcc %>%
   rename(weight = correlation) %>%
@@ -165,9 +249,10 @@ g <- as_tbl_graph(g4) %>%
 
 #gx<-g
 # Louvain
-community_bin <- file.path("~/Desktop/BiG-SCAPE/bin/community ")
-convert_bin <- file.path("~/Desktop/BiG-SCAPE/bin/convert")
-hierarchy_bin <- file.path("~/Desktop/BiG-SCAPE/bin/hierarchy -n")
+# Need to install https://github.com/AvantiShri/deterministic_louvain
+community_bin <- file.path("osd2014_16S_asv/bin/community ")
+convert_bin <- file.path("osd2014_16S_asv/bin/convert")
+hierarchy_bin <- file.path("osd2014_16S_asv/bin/hierarchy -n")
 
 community_options <- "637268 -l -1 -v"
 g_louvain <- run_louvain(X = "g", graph = g, community_bin = community_bin, convert_bin = convert_bin, hierarchy_bin = hierarchy_bin, community_options = community_options)
@@ -188,7 +273,6 @@ V(g)$com <-  as.character(membership(com_l_2))
 #   geom_edge_link(aes(color = sign, alpha = weight), show.legend = FALSE, width = 0.5) +
 #   geom_node_point(aes(fill = com),shape = 21, color = "black" , show.legend = FALSE)  +
 #   theme_graph()
-
 
 counts <- dplyr::as_data_frame(g) %>%
   group_by(com) %>%
@@ -229,11 +313,7 @@ write.graph(as.igraph(g.c), file = "osd2014_16S_asv/data/osd2014_dada_sparcc_mod
 
 # Plot distribution of the communities in our samples ---------------------
 
-my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
-
-
 l_p <- transform_sample_counts(osd2014_dada2_phyloseq_beta, function (x) x/sum(x))
-
 
 qpsmelt <- function(X) {
   if (taxa_are_rows(X)) {
@@ -589,42 +669,7 @@ rownames(ME) <- rownames(mat)
 
 osd2014_metadata <- as(sample_data(osd2014_dada2_phyloseq_beta), "matrix") %>% tbl_df()
 
-osd2014_mld_adata <- tbl(my_db, "osd2014_mld_data") %>%
-  collect(n = Inf) %>%
-  rename(label = osd_id) %>%
-  select(label, mld) %>%
-  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
 
-osd2014_phenology_adata <- tbl(my_db, "osd2014_phenology_data") %>%
-  collect(n = Inf) %>%
-  rename(label = osd_id) %>%
-  select(label, pp_8d_0.5) %>%
-  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
-
-osd2014_satellite_adata <- tbl(my_db, "osd2014_satellite_data") %>%
-  collect(n = Inf) %>%
-  rename(label = osd_id) %>%
-  select(label, chlor_a_8d, par_8d, poc_8d, KD490_8d) %>%
-  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
-
-osd2014_woa13_adata <- tbl(my_db, "osd2014_woa13_data") %>%
-  collect(n = Inf) %>%
-  rename(label = osd_id) %>%
-  select(-long_woa13, -lat_woa13) %>%
-  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
-
-osd2014_iron_adata <- tbl(my_db, "osd2014_iron_data") %>%
-  collect(n = Inf) %>%
-  rename(label = osd_id) %>%
-  select(label, iron) %>%
-  mutate_if(is.numeric, vegan::decostand, method = "standardize", na = na.omit)
-
-osd2014_rescaled_2013_median_long <- tbl(my_db, "osd2014_halpern_scaled_median") %>%
-  collect(n = Inf) %>%
-  filter(buffer == "1km") %>%
-  select(-buffer) %>%
-  spread(ohi_variable, median, fill =0) %>%
-  select(-global_cumul_impact, -global_cumul_impact_diff_2008)
 
 
 library(tidyverse)
@@ -753,4 +798,7 @@ l_pl_variable <- c(
 
 ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_sparcc_com_cor.pdf", width = 11.69, height = 8.27)
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata")
+# END: Save objects ------------------------------------------------------------

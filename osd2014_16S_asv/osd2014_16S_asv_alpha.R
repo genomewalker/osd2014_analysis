@@ -6,37 +6,48 @@ library(RPostgreSQL)
 library(pbmcapply)
 library(magrittr)
 library(ggpubr)
+library(pbmcapply)
 
-load(file = "osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
-
-osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
-  collect(n = Inf)
-
 st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_coastal") %>%
   collect(n = Inf) %>%
   filter(label %in% osd2014_amp_mg_intersect$label)
-
 osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
   collect(n = Inf)
-
-osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
-  collect(n = Inf)
-
 osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
   collect(n = Inf)
-
 osd2014_cdata_filt <- tbl(my_db, "osd2014_cdata") %>%
   collect(n = Inf) %>%
   filter(label %in% osd2014_amp_mg_intersect$label, meow_province %in% osd2014_meow_regions$meow_province)
-
 osd2014_sample_cohesion <- tbl(my_db, "osd2014_sample_cohesion") %>%
   collect(n = Inf)
-
 st_100 <- tbl(my_db, "osd2014_st_100") %>%
   collect(n = Inf)
-
 st_100_long <- st_100 %>%
   gather(variable, value, -label) %>%
   filter(label %in% osd2014_amp_mg_intersect$label) %>%
@@ -47,7 +58,27 @@ st_100_long <- st_100 %>%
   filter(class == "marine") %>%
   arrange(label)
 
-source("https://raw.githubusercontent.com/colinbrislawn/phyloseq/f33259c9291434b965afa99b477dad0c751dad95/R/extend_vegan.R")
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load(file = "osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_16S_asv_divnet_results.Rdata", verbose = TRUE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_divnet_results.Rdata"), verbose = TRUE)
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
+
 get_div <- function(i, physeq){
   # Subsample
   rarefied_physeq <- rarefy_even_depth(physeq, sample.size = min_lib, verbose = FALSE, replace = TRUE)
@@ -63,8 +94,7 @@ get_div <- function(i, physeq){
   return(df)
 }
 
-library(phyloseq)
-library(pbmcapply)
+
 trials <- 1000
 
 
@@ -464,7 +494,6 @@ osd2014_shannon_estimates_provinces <- data.frame("label" = names(osd2014_asv_al
   inner_join(osd2014_cdata) %>%
   as_tibble()
 
-load("osd2014_16S_asv/data/osd2014_16S_asv_divnet_results.Rda", verbose = TRUE)
 
 osd2014_shannon_estimates_provinces_asv <-  data.frame("label" = names(osd2014_divnet_asv_provinces$shannon),
                                                        "DivNet.est" = osd2014_divnet_asv_provinces$shannon,
@@ -595,6 +624,7 @@ ggsave(p2, filename = "osd2014_16S_asv/figures/osd2014_dada2_phyloseq_alpha_scat
 
 ggsave(beta_plot, filename = "osd2014_16S_asv/figures/osd2014_dada2_phyloseq_alpha_betadiv_genus.pdf", width = 4, height = 3)
 
-
-# load("osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata", verbose = TRUE)
-# save.image("osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata")
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
+save.image("osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata")
+# END: Save objects ------------------------------------------------------------

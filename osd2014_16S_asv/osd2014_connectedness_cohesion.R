@@ -8,6 +8,68 @@
 # iter (number of iterations for the null model), tax.shuffle (whether to use taxon shuffle or row shuffle randomization),
 # and use.custom.cors (whether to use a pre-determined correlation matrix)
 
+library(tidyverse)
+library(ggridges)
+library(phyloseq)
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_connectedness_cohesion.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_connectedness_cohesion.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
+my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
+  collect(n = Inf)
+st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_coastal") %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label)
+osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
+  collect(n = Inf)
+osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
+  collect(n = Inf)
+osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
+  collect(n = Inf)
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+
+load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_sparcc_filtered.Rdata", verbose = TRUE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_sparcc_filtered.Rdata"), verbose = TRUE)
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
+
+
+
 ####################create necessary functions######################
 
 #find the number of zeroes in a vector
@@ -56,24 +118,12 @@ use.custom.cors <- T
 
 # Read in dataset
 ## Data should be in a matrix where each row is a sample.
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
-b <- as(otu_table(osd2014_dada2_phyloseq_beta), "matrix")
 
-load("osd2014_16S_asv/data/osd2014_sparcc_filtered.Rda", verbose = TRUE)
-#  load("osd2014_16S_asv/data/osd2014_16S_asv_networks.Rdata", verbose = TRUE)
-#  rm(osd2014_16S_asv_se_gl_minus2)
-#  rm(osd2014_16S_asv_se_mb_minus3)
-#
-# osd2014_sparcc_g <- osd2014_sparcc %>%
-#   dplyr::rename(weight = correlation) %>%
-#   #mutate(weight_orig = weight, weight = abs(weight)) %>%
-#   graph_from_data_frame(directed = FALSE)
-#
-# custom.cor.mat <-  as.matrix(as_adjacency_matrix(osd2014_sparcc_g, attr = "weight"))
+b <- as(otu_table(osd2014_dada2_phyloseq_beta), "matrix")
 custom.cor.mat <- as.matrix(osd2014_sparcc_filtered)
 
 # Read in custom correlation matrix, if desired. Must set "use.custom.cors" to TRUE
-  if(use.custom.cors == T) {
+if(use.custom.cors == T) {
   #custom.cor.mat <- read.csv("your_path_here.csv", header = T, row.names = 1)
   custom.cor.mat <- as.matrix(custom.cor.mat)
   #Check that correlation matrix and abundance matrix have the same dimension
@@ -217,26 +267,28 @@ cohesion.neg <- rel.d %*% connectedness.neg
 output <- list(connectedness.neg, connectedness.pos, cohesion.neg, cohesion.pos)
 
 names(output) <- c("Negative Connectedness", "Positive Connectedness", "Negative Cohesion", "Positive Cohesion")
-st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_terrestrial") %>%
-  collect(n = Inf)
 
 cohesion_df <- bind_rows(tibble(label = rownames(output$`Negative Cohesion`), cohesion = output$`Negative Cohesion`[,1], class = "negative"),
                          tibble(label = rownames(output$`Positive Cohesion`), cohesion = output$`Positive Cohesion`[,1], class = "positive")) %>%
   mutate(label = fct_relevel(label, st_100_order_terrestrial$label)) %>%
   left_join(osd2014_cdata) %>%
-  filter(meow_region %in% osd2014_meow_regions$meow_region)
+  filter(meow_province %in% osd2014_meow_regions$meow_province)
 
 ggplot(cohesion_df, aes(y = meow_province, x = cohesion, fill = class)) +
-geom_density_ridges(aes(point_fill = class),
-                 jittered_points = TRUE, point_color = "grey20", point_shape = 21, point_size = 0.8, scale = 0.7, alpha = .7,
-                 rel_min_height = 0.0 ,panel_scaling = T, size = 0.2, color = "black")+
+  geom_density_ridges(aes(point_fill = class),
+                      jittered_points = TRUE, point_color = "grey20", point_shape = 21, point_size = 0.8, scale = 0.7, alpha = .7,
+                      rel_min_height = 0.0 ,panel_scaling = T, size = 0.2, color = "black")+
   theme_light()
 
 
 cohesion_df <- tibble(label = rownames(output$`Negative Cohesion`), cohesion_negative = output$`Negative Cohesion`[,1]) %>%
-                         left_join(tibble(label = rownames(output$`Positive Cohesion`), cohesion_positive = output$`Positive Cohesion`[,1]))
+  left_join(tibble(label = rownames(output$`Positive Cohesion`), cohesion_positive = output$`Positive Cohesion`[,1]))
 
 connectedness_df <- tibble(asv = names(connectedness.neg), connectedness_negative = connectedness.neg) %>%
   left_join(tibble(asv = names(connectedness.pos), connectedness_positive = connectedness.pos))
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image("osd2014_16S_asv/data/osd2014_connectedness_cohesion.Rdata")
+# END: Save objects ------------------------------------------------------------
+

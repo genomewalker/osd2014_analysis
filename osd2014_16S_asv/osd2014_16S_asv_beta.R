@@ -7,16 +7,31 @@ library(microbiomeSeq)
 library(GUniFrac)
 library(ggpubr)
 
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_asv_pina_tina_results.Rdata")
-load("osd2014_16S_asv/data/osd2014_mitag_qiime97_phyloseq.Rdata")
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
 
 
-# What we want to do ------------------------------------------------------
-# - Which of the distances is the best to explain the patterns we see
-# - Check Ramiro's paper about the strategies
-# -
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
 
+# load("osd2014_16S_asv/data/osd2014_16S_asv_beta.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_beta.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
 osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
@@ -27,6 +42,52 @@ osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
 st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_coastal") %>%
   collect(n = Inf)
 osd2014_cdata <- osd2014_cdata %>% filter(label %in% osd2014_amp_mg_intersect$label) %>% left_join(osd2014_meow_regions)
+
+osd2014_haversine_distance <- tbl(my_db, "osd2014_haversine_distance") %>%
+  collect(n = Inf) %>%
+  dplyr::rename(haversine = distance) %>%
+  inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
+  inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label")) %>%
+  mutate(same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE))
+
+osd2014_selected_meow_provinces <-tbl(my_db, "osd2014_selected_meow_provinces") %>%
+  collect(n = Inf)
+
+osd2014_simka_k31_bc <- tbl(my_db, "osd2014_simka_k31_bc") %>%
+  collect(n = Inf)
+osd2014_simka_k21_bc <- tbl(my_db, "osd2014_simka_k21_bc") %>%
+  collect(n = Inf)
+
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_16S_asv_pina_tina_results.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_mitag_qiime97_phyloseq.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_bMNTD_bNTI_results.Rda", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_rc-analysis_9999.Rda", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_simka_bc.Rdata", verbose = TRUE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_pina_tina_results.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_mitag_qiime97_phyloseq.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_bMNTD_bNTI_results.Rda"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_rc-analysis_9999.Rda"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_simka_bc.Rdata"), verbose = TRUE)
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
+
+
 
 
 
@@ -109,10 +170,6 @@ osd2014_mitag_bc <- vegan::vegdist(osd2014_mitag_qiime97_phyloseq_t) %>%
   mutate(class = "Bray-Curtis") %>%
   as_tibble()
 
-osd2014_simka_k31_bc <- tbl(my_db, "osd2014_simka_k31_bc") %>%
-  collect(n = Inf)
-osd2014_simka_k21_bc <- tbl(my_db, "osd2014_simka_k21_bc") %>%
-  collect(n = Inf)
 
 osd2014_16S_asv_wu <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, method = "wunifrac") %>%
   as.dist() %>%
@@ -614,11 +671,6 @@ df_LCBD <- tibble(label = names(beta_div$LCBD),
 # bNTI: distribution are denoted as b-Nearest Taxon Index (bNTI), with | bNTI | > 2 being
 # considered as significant departures from random phylogenetic turnover, pointing to the
 # action of selection.
-load("osd2014_16S_asv/data/osd2014_bMNTD_bNTI_results.Rda", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_rc-analysis_9999.Rda", verbose = TRUE)
-
-
-
 
 selection_bNTI <- broom::tidy(as.dist(weighted.bNTI)) %>%
   as_tibble() %>%
@@ -850,15 +902,7 @@ ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_dada2_phy
 
 # Distance decay ----------------------------------------------------------
 
-osd2014_haversine_distance <- tbl(my_db, "osd2014_haversine_distance") %>%
-  collect(n = Inf) %>%
-  rename(haversine = distance) %>%
-  inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
-  inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label")) %>%
-  mutate(same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE))
 
-osd2014_selected_meow_provinces <-tbl(my_db, "osd2014_selected_meow_provinces") %>%
-  collect(n = Inf)
 
 osd2014_haversine_distance %>%
   inner_join(osd2014_16S_asv_bc) %>%
@@ -978,4 +1022,7 @@ flt <- paste('meow_province == "Lusitanian"', sep = "|")
 mantel_lus <- calculate_mantel_bc(X = flt, Y = NULL)
 mantel_lus$mantel.corr %>% plot
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image("osd2014_16S_asv/data/osd2014_16S_asv_beta.Rdata")
+# END: Save objects ------------------------------------------------------------

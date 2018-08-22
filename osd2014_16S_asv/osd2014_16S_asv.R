@@ -5,12 +5,43 @@ library(metagenomeSeq)
 library(ggpubr)
 library(DESeq2)
 
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata", verbose = TRUE)
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_16S_alpha_diversity.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_preprocess.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load("osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata", verbose = TRUE)
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata"))
+# Load necessary data -----------------------------------------------------
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
 
 
 # ASV table pre-processing ------------------------------------------------
-# We will keep ASVs with at least 25 reads total over all samples
 # We will explore different thresholds to remove ASVs that
 
 osd2014_16S_summary_tcounts <- psmelt(osd2014_dada2_phyloseq) %>%
@@ -312,8 +343,11 @@ osd2014_dada2_phyloseq_beta_norm <- prune_taxa(osd2014_16S_summary %>% filter(me
 
 
 
+# Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image(file = "osd2014_16S_asv/data/osd2014_16S_asv_preprocess.Rdata", compress = TRUE)
 save(osd2014_dada2_phyloseq_alpha, osd2014_dada2_phyloseq_alpha_css, osd2014_dada2_phyloseq_beta_css,
      osd2014_dada2_phyloseq_alpha_scaled, osd2014_dada2_phyloseq_beta_scaled, osd2014_dada2_phyloseq_beta,
      osd2014_dada2_phyloseq_alpha_norm, osd2014_dada2_phyloseq_alpha_vst,
      osd2014_dada2_phyloseq_beta_vst, osd2014_dada2_phyloseq_beta_norm, file = "osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata")
+# Save objects ------------------------------------------------------------
