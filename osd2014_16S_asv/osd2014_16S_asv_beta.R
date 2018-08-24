@@ -42,17 +42,14 @@ osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
 st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_coastal") %>%
   collect(n = Inf)
 osd2014_cdata <- osd2014_cdata %>% filter(label %in% osd2014_amp_mg_intersect$label) %>% left_join(osd2014_meow_regions)
-
 osd2014_haversine_distance <- tbl(my_db, "osd2014_haversine_distance") %>%
   collect(n = Inf) %>%
   dplyr::rename(haversine = distance) %>%
   inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
   inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label")) %>%
   mutate(same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE))
-
 osd2014_selected_meow_provinces <-tbl(my_db, "osd2014_selected_meow_provinces") %>%
   collect(n = Inf)
-
 osd2014_simka_k31_bc <- tbl(my_db, "osd2014_simka_k31_bc") %>%
   collect(n = Inf)
 osd2014_simka_k21_bc <- tbl(my_db, "osd2014_simka_k21_bc") %>%
@@ -69,7 +66,6 @@ load("osd2014_16S_asv/data/osd2014_simka_bc.Rdata", verbose = TRUE)
 
 # Basic contextual data
 load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
-
 
 # If remote use
 load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)

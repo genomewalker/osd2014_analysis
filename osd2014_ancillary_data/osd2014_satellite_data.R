@@ -4,9 +4,30 @@ library(fields)
 library(ncdf4)
 
 
-# READ COORDINATE FILE
-my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
 
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_ancillary_data/data/osd2014_satellite_data_get.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/osd2014_satellite_data_get.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
+my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
 osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
 osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
@@ -16,6 +37,57 @@ osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
   mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
   separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
   mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+
+
+
+# If downloaded file at osd2014_ancillary_data/data/ use:
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+osd2014_cdata <- osd2014_cdata %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+# If remote use
+files <- c("A20141522014181.L3m_MO_CHL_chlor_a_4km.nc",  "A20141822014212.L3m_MO_CHL_chlor_a_4km.nc",
+           "A20141522014181.L3m_MO_PAR_par_4km.nc", "A20141822014212.L3m_MO_PAR_par_4km.nc",
+           "A20141522014181.L3m_MO_POC_poc_4km.nc", "A20141822014212.L3m_MO_POC_poc_4km.nc",
+           "A20141522014181.L3m_MO_KD490_Kd_490_4km.nc", "A20141822014212.L3m_MO_KD490_Kd_490_4km.nc",
+           "A20141522014181.L3m_MO_FLH_ipar_4km.nc", "A20141822014212.L3m_MO_FLH_ipar_4km.nc",
+           "A20141522014181.L3m_MO_CHL_chlor_a_4km.nc",
+           "A20151612015168.L3m_8D_CHL_chlor_a_4km.nc", "A20151692015176.L3m_8D_CHL_chlor_a_4km.nc",
+           "A20151772015184.L3m_8D_CHL_chlor_a_4km.nc", "A20151852015192.L3m_8D_CHL_chlor_a_4km.nc",
+           "A20151932015200.L3m_8D_CHL_chlor_a_4km.nc",
+           "A20151612015168.L3m_8D_PAR_par_4km.nc", "A20151692015176.L3m_8D_PAR_par_4km.nc",
+           "A20151772015184.L3m_8D_PAR_par_4km.nc", "A20151852015192.L3m_8D_PAR_par_4km.nc",
+           "A20151932015200.L3m_8D_PAR_par_4km.nc",
+           "A20151612015168.L3m_8D_POC_poc_4km.nc", "A20151692015176.L3m_8D_POC_poc_4km.nc",
+           "A20151772015184.L3m_8D_POC_poc_4km.nc", "A20151852015192.L3m_8D_POC_poc_4km.nc",
+           "A20151932015200.L3m_8D_POC_poc_4km.nc",
+           "A20151612015168.L3m_8D_KD490_Kd_490_4km.nc", "A20151692015176.L3m_8D_KD490_Kd_490_4km.nc",
+           "A20151772015184.L3m_8D_KD490_Kd_490_4km.nc", "A20151852015192.L3m_8D_KD490_Kd_490_4km.nc",
+           "A20151932015200.L3m_8D_KD490_Kd_490_4km.nc")
+
+purrr::map(files, function(x){download.file(url = paste0("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/", x),
+                                            destfile = paste0("osd2014_ancillary_data/data/", x))})
+
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+osd2014_cdata <- osd2014_cdata %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
 
 my_date = data.frame(local_date = c("12-06-2014","13-06-2014","17-06-2014","18-06-2014",
                                     "19-06-2014","20-06-2014","21-06-2014","22-06-2014",
@@ -32,7 +104,7 @@ range(myCoord$start_lon)
 ####MONTHLY####
 
 #1# READ CHL.NC FILES
-mycdf_june <- nc_open("osd2014_ancillary_data/data/A20141522014181.L3m_MO_CHL_chlor_a_4km.nc.1", verbose = FALSE, write = FALSE)
+mycdf_june <- nc_open("osd2014_ancillary_data/data/A20141522014181.L3m_MO_CHL_chlor_a_4km.nc", verbose = FALSE, write = FALSE)
 mycdf_july <- nc_open("osd2014_ancillary_data/data/A20141822014212.L3m_MO_CHL_chlor_a_4km.nc", verbose = TRUE, write = FALSE)
 print(mycdf_june)
 lat <- ncvar_get(mycdf_june,'lat')
@@ -317,8 +389,6 @@ for (i in 1:nrow(myCoord)){
 colnames(out)[8] = "FLH_monthly"
 print(out)
 
-
-
 tmpin6 <- raster("osd2014_ancillary_data/data/A20141522014181.L3m_MO_CHL_chlor_a_4km.nc")
 tmpin6
 e <- extent(-18040095, -18040000, -9020047, -9020000)
@@ -335,6 +405,7 @@ mycdf_8d_2 <- nc_open("osd2014_ancillary_data/data/A20151692015176.L3m_8D_CHL_ch
 mycdf_8d_3 <- nc_open("osd2014_ancillary_data/data/A20151772015184.L3m_8D_CHL_chlor_a_4km.nc", verbose = TRUE, write = FALSE)
 mycdf_8d_4 <- nc_open("osd2014_ancillary_data/data/A20151852015192.L3m_8D_CHL_chlor_a_4km.nc", verbose = TRUE, write = FALSE)
 mycdf_8d_5 <- nc_open("osd2014_ancillary_data/data/A20151932015200.L3m_8D_CHL_chlor_a_4km.nc", verbose = TRUE, write = FALSE)
+
 
 lat <- ncvar_get(mycdf_8d_1,'lat')
 lon <- ncvar_get(mycdf_8d_1,'lon')
@@ -518,7 +589,6 @@ for (i in 1:nrow(myCoord)){
 colnames(out_8d)[6] = "poc_8d"
 print(out_8d)
 
-
 #
 #4# READ POC.NC FILES
 #
@@ -584,9 +654,20 @@ print(out_8d)
 
 dt <- out %>% as_tibble() %>%
   left_join(out_8d %>% as_tibble()) %>%
-  dplyr::select(-lat, -long)
+  dplyr::select(-lat, -long) %>%
+  dplyr::rename(label = osd_id)
 
-library(RPostgreSQL)  # loads the PostgreSQL driver
-drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
-con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
-dbWriteTable(con, c("osd_analysis", "osd2014_satellite_data"), value=dt,overwrite=TRUE,row.names=FALSE)
+# library(RPostgreSQL)  # loads the PostgreSQL driver
+# drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
+# con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
+# dbWriteTable(con, c("osd_analysis", "osd2014_satellite_data"), value=dt,overwrite=TRUE,row.names=FALSE)
+
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
+save.image(file = "osd2014_ancillary_data/data/osd2014_satellite_data_get.Rdata")
+save(dt, file = "osd2014_ancillary_data/data/osd2014_satellite_data.Rdata")
+# END: Save objects ------------------------------------------------------------
+
+
+
+

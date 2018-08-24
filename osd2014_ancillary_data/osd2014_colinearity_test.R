@@ -6,7 +6,6 @@ osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
 osd2014_ancillary_data <- tbl(my_db, "osd2014_woa13_data") %>%
   collect(n = Inf)
-
 st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_terrestrial") %>%
   collect(n = Inf) %>%
   filter(label %in% osd2014_amp_mg_intersect$label)

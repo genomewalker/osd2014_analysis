@@ -2,7 +2,73 @@ library(RNetCDF)
 library(ncdf)
 library(fields)
 library(ncdf4)
+
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_ancillary_data/data/osd2014_iron_data_get.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/osd2014_iron_data_get.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
+my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+
+osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
+  collect(n = Inf)
+osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+
+# If downloaded file at osd2014_ancillary_data/data/ use:
 mycdf <- nc_open("osd2014_ancillary_data/data/ETOPO_PRE1_1m_fer_Y3000.nc", verbose = TRUE, write = FALSE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+osd2014_cdata <- osd2014_cdata %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+
+# If remote use
+download.file(url = "http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/ETOPO_PRE1_1m_fer_Y3000.nc",
+              destfile = "osd2014_ancillary_data/data/ETOPO_PRE1_1m_fer_Y3000.nc")
+mycdf <- nc_open("osd2014_ancillary_data/data/ETOPO_PRE1_1m_fer_Y3000.nc", verbose = TRUE, write = FALSE)
+
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+osd2014_cdata <- osd2014_cdata %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
 Fer  <- ncvar_get(mycdf, "Fer")
 latmat  <- ncvar_get(mycdf, "ETOPO60Y")
 longmat <- ncvar_get(mycdf, "ETOPO60X")
@@ -22,17 +88,6 @@ mapLat = data.frame(lat=latmat, map=c(1:length(latmat)))
 mapLong = data.frame(long=longmat, map=c(1:length(longmat)))
 mapLong$long180 =  ifelse(mapLong$long>180, (((mapLong$long + 180) %% 360) - 180), mapLong$long)
 
-my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
-
-osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
-  collect(n = Inf)
-osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
-  collect(n = Inf) %>%
-  filter(label %in% osd2014_amp_mg_intersect$label) %>%
-  dplyr::select(label, start_lat, start_lon, local_date) %>%
-  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
-  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
-  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
 
 my_date = data.frame(local_date = c("12-06-2014","13-06-2014","17-06-2014","18-06-2014",
                                     "19-06-2014","20-06-2014","21-06-2014","22-06-2014",
@@ -73,14 +128,20 @@ for (i in 1:nrow(myCoord)){
 
     out[i,]= c(osd_id, long, lat, long_gd, lat_gd, iron)
 }
-out
-write.table(out[,-c(4,5)], "Iron_osd_sites.csv", sep=",", quote=F, row.names=F)
-library(RPostgreSQL)  # loads the PostgreSQL driver
-drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
-con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
-dbWriteTable(con, c("osd_analysis", "osd2014_iron_data"), value=out %>% dplyr::select(-lat, long),overwrite=TRUE,row.names=FALSE)
 
+write.table(out[,-c(4,5)], "osd2014_ancillary_data/data/Iron_osd_sites.csv", sep=",", quote=F, row.names=F)
 
+# library(RPostgreSQL)  # loads the PostgreSQL driver
+# drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
+# con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
+# dbWriteTable(con, c("osd_analysis", "osd2014_iron_data"), value=out %>% dplyr::select(-lat, long),overwrite=TRUE,row.names=FALSE)
+iron <- out %>% dplyr::select(-lat, long)
+
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
+save.image(file = "osd2014_ancillary_data/data/osd2014_iron_data_get.Rdata")
+save(iron, file = "osd2014_ancillary_data/data/osd2014_iron_data.Rdata")
+# END: Save objects ------------------------------------------------------------
 
 
 

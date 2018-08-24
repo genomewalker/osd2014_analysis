@@ -6,13 +6,32 @@ library(phyloseq)
 library(igraph)
 library(tidygraph)
 library(ggraph)
+
 source("osd2014_16S_asv/lib/fuzzyforest_lib.R")
 
-load("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata", verbose = TRUE)
-load("~/Downloads/ff_fit.Rda")
-#set seed so that results are reproducible
-set.seed(1)
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
 
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_fuzzyforest.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_fuzzyforest.Rdata"), verbose = TRUE)
+# END: WARNING!! --------------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
 osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
@@ -22,12 +41,34 @@ osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
   collect(n = Inf)
 osd2014_cdata <- osd2014_cdata %>%
   filter(label %in% osd2014_amp_mg_intersect$label, meow_province %in% osd2014_meow_regions$meow_province)
-
 osd2014_asv_connectedness <- tbl(my_db, "osd2014_asv_connectedness") %>%
   collect(n = Inf)
-
-osd2014_order_terrestrial <- tbl(my_db, "osd2014_st_order_terrestrial") %>%
+st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_coastal") %>%
   collect(n = Inf)
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata", verbose = TRUE)
+load("osd2014_16S_asv/data/osd2014_ff_fit.Rdata", verbose = TRUE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_ff_fit.Rdata"), verbose = TRUE)
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
+
+#set seed so that results are reproducible
+set.seed(1)
+
+
 osd2014_dada2_phyloseq_alpha_prop <- transform_sample_counts(osd2014_dada2_phyloseq_alpha, function(x) x/sum(x))
 osd2014_order_terrestrial <- osd2014_order_terrestrial %>%
   filter(label %in% osd2014_cdata$label)
@@ -203,13 +244,8 @@ all_comps <- bind_rows(
   mutate(agg_prop = sum(prop)) %>% ungroup() %>% mutate(order_mod = ifelse(agg_prop > 0.01, Order, "Other"))
 
 
-
-
-
 # all_comps_order <- all_comps %>% select(order_mod) %>% unique() %>%
 #   mutate(colour = o_colors)
-
-
 
 
 order_mod <- c("SAR11_clade", "Synechococcales", "Flavobacteriales", "Rhodobacterales", "Verrucomicrobiales", "Betaproteobacteriales",
@@ -237,10 +273,6 @@ bind_graphs(
   get_g("com_9") %>% activate(nodes) %>% mutate(order_mod = ifelse(Order %in% all_comps_order$order_mod, Order, "Other")) %>%
     inner_join(all_comps_order) %>% inner_join(top_features %>% select(name, mean_imp, median_imp))
 ) %>% write.graph(file = "osd2014_16S_asv/data/osd2014_fuzzyforest.graphml", format = "graphml")
-
-
-
-
 
 
 # Plot the abundance of each ASV in each LC and MEOW province -------------
@@ -360,4 +392,7 @@ bind_rows(map(1:50, get_accuracy)) %>% ggplot(aes(y = value, x = "accuracy")) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image("osd2014_16S_asv/data/osd2014_fuzzyforest.Rda")
+# END: Save objects ------------------------------------------------------------

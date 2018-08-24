@@ -5,11 +5,54 @@ library(metagenomeSeq)
 library(ggpubr)
 library(DESeq2)
 
-load("osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata", verbose = TRUE)
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
+
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_16S_asv/data/osd2014_mitag_qiime97_preprocess.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_mitag_qiime97_preprocess.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
+  collect(n = Inf)
+osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  base::as.data.frame()
+
+# If downloaded file at osd2014_16S_asv/data/ use:
+load("osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata", verbose = TRUE)
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+
+# If remote use
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata"), verbose = TRUE)
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
 
 # ASV table pre-processing ------------------------------------------------
-# We will keep ASVs with at least 25 reads total over all samples
 # We will explore different thresholds to remove ASVs that
 
 osd2014_mitag_summary_tcounts <- t(as(otu_table(osd2014_mitag_qiime97_phyloseq),"matrix")) %>%
@@ -311,11 +354,15 @@ osd2014_mitag_qiime97_phyloseq_beta_norm <- prune_taxa(osd2014_mitag_summary %>%
 
 
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
 save.image(file = "osd2014_16S_asv/data/osd2014_mitag_qiime97_preprocess.Rdata", compress = TRUE)
 save(osd2014_mitag_qiime97_phyloseq_alpha, osd2014_mitag_qiime97_phyloseq_alpha_css, osd2014_mitag_qiime97_phyloseq_beta_css,
      osd2014_mitag_qiime97_phyloseq_alpha_scaled, osd2014_mitag_qiime97_phyloseq_beta_scaled, osd2014_mitag_qiime97_phyloseq_beta,
      osd2014_mitag_qiime97_phyloseq_alpha_norm, osd2014_mitag_qiime97_phyloseq_alpha_vst,
      osd2014_mitag_qiime97_phyloseq_beta_vst, osd2014_mitag_qiime97_phyloseq_beta_norm, file = "osd2014_16S_asv/data/osd2014_mitag_qiime97_physeq_filt_objects.Rdata")
+# END: Save objects ------------------------------------------------------------
+
 
 
 
@@ -343,81 +390,55 @@ osd2014_mitag_sngs_phyloseq_phylum <- glom_prop_tidy(osd2014_mitag_sngs_phyloseq
 
 
 
+# WARNING: Don’t run ------------------------------------------------------
+# BEGIN: Preparation of the miTAG data ------------------------------------
 # qiime2 vsearch closed reference OTUs ------------------------------------
+# Dowload data from http://osd2014.metagenomics.eu/osd2014_16S_asv/data/ to
+# osd2014_16S_asv/data/s132_exported-feature-table_97/
+# http://osd2014.metagenomics.eu/osd2014_16S_asv/data/s132_exported-feature-table_97/feature-table.biom
+# http://osd2014.metagenomics.eu/osd2014_16S_asv/data/s132_exported-feature-table_97/dna-sequences.tsv
+# http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_mitag_tax.tsv
 
+download.file(url = "http://osd2014.metagenomics.eu/osd2014_16S_asv/data/s132_exported-feature-table_97/feature-table.biom",
+              destfile = "osd2014_16S_asv/data/s132_exported-feature-table_97/feature-table.biom")
+download.file(url = "http://osd2014.metagenomics.eu/osd2014_16S_asv/data/s132_exported-feature-table_97/sequences.tsv",
+              destfile = "osd2014_16S_asv/data/s132_exported-feature-table_97/sequences.tsv")
+download.file(url = "http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_mitag_tax.tsv",
+              destfile = "osd2014_16S_asv/data/osd2014_mitag_tax.tsv")
 
- qiime2_97_biom <- biomformat::read_biom("~/Downloads/s132_exported-feature-table_97/feature-table.biom")
- qiime2_97_dna <- read_tsv("~/Downloads/s132_exported-feature-table_97/dna-sequences.tsv", col_names = FALSE, trim_ws = T) %>%
-   select(-X3) %>%
-   dplyr::rename(OTU = X1, sequence = X2)
+qiime2_97_biom <- biomformat::read_biom("osd2014_16S_asv/data/s132_exported-feature-table_97/feature-table.biom")
+qiime2_97_dna <- read_tsv("osd2014_16S_asv/data/s132_exported-feature-table_97/dna-sequences.tsv", col_names = FALSE, trim_ws = T) %>%
+  select(-X3) %>%
+  dplyr::rename(OTU = X1, sequence = X2)
 
- osd2014_mitag <- read_tsv("~/Downloads/osd2014_mitag_tax.tsv", col_names = T) %>%
+osd2014_mitag <- read_tsv("osd2014_16S_asv/data/osd2014_mitag_tax.tsv", col_names = T) %>%
   dplyr::rename(sequence = asv) %>%
-   dplyr::select(-label, -seq_id) %>%
-   unique() %>%
-   inner_join(qiime2_97_dna) %>%
-   unique() %>%
-   filter(!(OTU == "AF355050.1.1465" & is.na(Order))) %>% filter(!(OTU == "KF464904.1.1246" & is.na(Genus)))
-#
- my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
+  dplyr::select(-label, -seq_id) %>%
+  unique() %>%
+  inner_join(qiime2_97_dna) %>%
+  unique() %>%
+  filter(!(OTU == "AF355050.1.1465" & is.na(Order))) %>% filter(!(OTU == "KF464904.1.1246" & is.na(Genus)))
 
- osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
-   collect(n = Inf)
+row.names(osd2014_cdata) <- osd2014_cdata$label
 
- osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
-   collect(n = Inf) %>%
-   filter(label %in% osd2014_amp_mg_intersect$label) %>%
-   base::as.data.frame()
-#
- row.names(osd2014_cdata) <- osd2014_cdata$label
-
- qiime2_97_otutable <- as.data.frame(as.matrix(biomformat::biom_data(qiime2_97_biom)))
- names(qiime2_97_otutable) <- plyr::mapvalues(names(qiime2_97_otutable),
-                    c('OSD114_2014-06-21_50m_NPL022', 'OSD118_2014-06-24_0.2m_NPL022', 'OSD72_2014-07-21_0.8m_NPL022', 'OSD159_2014-06-21_2m_NPL022'),
-                    c('OSD114_2014-06-21_1m_NPL022', 'OSD118_2014-06-21_0.2m_NPL022', 'OSD72_2014-06-21_0.8m_NPL022', 'OSD159_2014-06-19_2m_NPL022'))
+qiime2_97_otutable <- as.data.frame(as.matrix(biomformat::biom_data(qiime2_97_biom)))
+names(qiime2_97_otutable) <- plyr::mapvalues(names(qiime2_97_otutable),
+                                             c('OSD114_2014-06-21_50m_NPL022', 'OSD118_2014-06-24_0.2m_NPL022', 'OSD72_2014-07-21_0.8m_NPL022', 'OSD159_2014-06-21_2m_NPL022'),
+                                             c('OSD114_2014-06-21_1m_NPL022', 'OSD118_2014-06-21_0.2m_NPL022', 'OSD72_2014-06-21_0.8m_NPL022', 'OSD159_2014-06-19_2m_NPL022'))
 #
 #
- osd2014_tax <- as.matrix(as.data.frame(osd2014_mitag) %>% column_to_rownames("OTU"))
+osd2014_tax <- as.matrix(as.data.frame(osd2014_mitag) %>% column_to_rownames("OTU"))
 
 #
- osd2014_mitag_qiime97_phyloseq <- phyloseq(otu_table(as.matrix(qiime2_97_otutable), taxa_are_rows = TRUE), tax_table(osd2014_tax), sample_data(osd2014_cdata))
-#
- #load(file = "osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata")
-#
- save(osd2014_mitag_sngs_phyloseq, osd2014_mitag_phyloseq, osd2014_mitag_qiime97_phyloseq, file = "osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata")
-# create sngs mitag data --------------------------------------------------
-#
-# load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
-#
-#
-# otuXsample <- read.table("~/Downloads/otu_table-mg-sina/osd2014_mg-traits-sina-SILVA-119.1_otuXsample.tsv", sep = "\t", header = T, check.names = F, row.names = 1)
-#
-# colnames(otuXsample) <-  plyr::mapvalues(colnames(otuXsample),
-#                                                         c('OSD114_2014-06-21_50m_NPL022', 'OSD118_2014-06-24_0.2m_NPL022', 'OSD72_2014-07-21_0.8m_NPL022', 'OSD159_2014-06-21_2m_NPL022'),
-#                                                         c('OSD114_2014-06-21_1m_NPL022', 'OSD118_2014-06-21_0.2m_NPL022', 'OSD72_2014-06-21_0.8m_NPL022', 'OSD159_2014-06-19_2m_NPL022'))
-#
-# otuXsample <- otuXsample[,(base::colnames(otuXsample) %in% osd2014_amp_mg_intersect$label)]
-#
-# otuXsample <- otuXsample[rowSums(otuXsample) > 0,]
-#
-# sngs_tax <- rownames(otuXsample) %>% as_tibble() %>% mutate(value = gsub("_", " ", value)) %>%
-#   inner_join(as(tax_table(osd2014_mitag_phyloseq), "matrix") %>% as_tibble(rownames = "value")) %>%
-#   mutate(value = gsub(" ", "_", value))
-#
-#
-#
-# otuXsample<-otuXsample[sngs_tax$value,]
-#
-#
-# sngs_tax_df <- sngs_tax %>%
-#   as.data.frame() %>%
-#   column_to_rownames("value")
-#
-# osd2014_mitag_sngs_phyloseq <- phyloseq(otu_table(otuXsample, taxa_are_rows = TRUE),
-#                                         sample_data(sample_data(osd2014_dada2_phyloseq_alpha)),
-#                                         tax_table(as.matrix(sngs_tax_df)))
-#
-# save(osd2014_mitag_sngs_phyloseq, osd2014_mitag_phyloseq, file = "osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata")
+osd2014_mitag_qiime97_phyloseq <- phyloseq(otu_table(as.matrix(qiime2_97_otutable), taxa_are_rows = TRUE), tax_table(osd2014_tax), sample_data(osd2014_cdata))
+
+
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
+save(osd2014_mitag_sngs_phyloseq, osd2014_mitag_phyloseq, osd2014_mitag_qiime97_phyloseq, file = "osd2014_16S_asv/data/osd2014_mitag_phyloseq.Rdata")
+# END: Save objects ------------------------------------------------------------
+
+
 
 
 

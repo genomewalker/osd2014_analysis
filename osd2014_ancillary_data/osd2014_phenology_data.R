@@ -1,10 +1,31 @@
 library(stringi)
+library(tidyverse)
 library(TeachingDemos)
 
+# BEGIN: WARNING!!!! -------------------------------------------------------------
+# You can access to the data used in this analysis in several ways:
+# 1. You have a copy of the PostgreSQL DB
+# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+#    in the data folder
+# 3. You can load the files remotely, it might take a while when the file is very large
+# END: WARNING!!!! -------------------------------------------------------------
 
-# READ COORDINATE FILE
+
+# BEGIN: WARNING!!: This will load all the data and results for the analysis --------
+# Uncomment if you want to use it. Some of the analysis step might require long
+# computational times and you might want to use a computer with many cores/CPUs
+
+# load("osd2014_ancillary_data/data/osd2014_phenology_data_get.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/osd2014_phenology_data_get.Rdata"), verbose = TRUE)
+
+# END: WARNING!! ---------------------------------------------------------------
+
+
+# BEGIN: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+# Load necessary data -----------------------------------------------------
+# Use if you have the postgres DB in place
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
-
 osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
 osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
@@ -14,6 +35,54 @@ osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
   mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
   separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
   mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+
+
+# If downloaded file at osd2014_ancillary_data/data/ use:
+PP_june <- read.csv("osd2014_ancillary_data/data/vgpm.2014152.all.xyz", h=T, sep=" ", fill=T)
+PP_july <- read.csv("osd2014_ancillary_data/data/vgpm.2014182.all.xyz", h=T, sep=" ",, fill=T)
+
+PP_8d_161 <- read.table("osd2014_ancillary_data/data/vgpm.2014161.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_169 <- read.table("osd2014_ancillary_data/data/vgpm.2014169.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_177 <- read.table("osd2014_ancillary_data/data/vgpm.2014177.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_185 <- read.table("osd2014_ancillary_data/data//vgpm.2014185.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_193 <- read.table("osd2014_ancillary_data/data/vgpm.2014193.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_201 <- read.table("osd2014_ancillary_data/data/vgpm.2014201.all.xyz", h=T, fill=T, sep=" ")
+
+
+# Basic contextual data
+load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+osd2014_cdata <- osd2014_cdata %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+# If remote use
+PP_june <- read.csv("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014152.all.xyz", h=T, sep=" ", fill=T)
+PP_july <- read.csv("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014182.all.xyz", h=T, sep=" ",, fill=T)
+
+PP_8d_161 <- read.table("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014161.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_169 <- read.table("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014169.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_177 <- read.table("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014177.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_185 <- read.table("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data//vgpm.2014185.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_193 <- read.table("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014193.all.xyz", h=T, fill=T, sep=" ")
+PP_8d_201 <- read.table("http://osd2014.metagenomics.eu/osd2014_ancillary_data/data/vgpm.2014201.all.xyz", h=T, fill=T, sep=" ")
+
+# Basic contextual data
+load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+osd2014_cdata <- osd2014_cdata %>%
+  collect(n = Inf) %>%
+  filter(label %in% osd2014_amp_mg_intersect$label) %>%
+  dplyr::select(label, start_lat, start_lon, local_date) %>%
+  mutate(local_date = gsub("/", "-", local_date), local_date = gsub("-14", "-2014", local_date)) %>%
+  separate(local_date, into = c("day", "month", "year"), remove = FALSE) %>%
+  mutate(day = as.integer(day), month = as.integer(month), year = as.integer(year))
+# Load necessary data -----------------------------------------------------
+
+# END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
+
+
 
 my_date = data.frame(local_date = c("12-06-2014","13-06-2014","17-06-2014","18-06-2014",
                                     "19-06-2014","20-06-2014","21-06-2014","22-06-2014",
@@ -30,11 +99,9 @@ range(myCoord$start_lon)
 #-------------------------------------------------------------------------------
 #1# PP_MONTHLY
 #-------------------------------------------------------------------------------
-PP_june = read.csv("osd2014_ancillary_data/data/vgpm.2014152.all.xyz", h=T, sep=" ", fill=T)
 PP_june = PP_june[, 1:3]
 dim(PP_june); head(PP_june)
 
-PP_july = read.csv("osd2014_ancillary_data/data/vgpm.2014182.all.xyz", h=T, sep=" ",, fill=T)
 PP_july = PP_july[, 1:3]
 dim(PP_july); head(PP_july)
 
@@ -84,12 +151,6 @@ out_pp_mon[out_pp_mon== -9999] <-NA
 #-------------------------------------------------------------------------------
 #2# PP_8d
 #-------------------------------------------------------------------------------
-PP_8d_161 = read.table("osd2014_ancillary_data/data/vgpm.2014161.all.xyz", h=T, fill=T, sep=" ")
-PP_8d_169 = read.table("osd2014_ancillary_data/data/vgpm.2014169.all.xyz", h=T, fill=T, sep=" ")
-PP_8d_177 = read.table("osd2014_ancillary_data/data/vgpm.2014177.all.xyz", h=T, fill=T, sep=" ")
-PP_8d_185 = read.table("osd2014_ancillary_data/data//vgpm.2014185.all.xyz", h=T, fill=T, sep=" ")
-PP_8d_193 = read.table("osd2014_ancillary_data/data/vgpm.2014193.all.xyz", h=T, fill=T, sep=" ")
-PP_8d_201 = read.table("osd2014_ancillary_data/data/vgpm.2014201.all.xyz", h=T, fill=T, sep=" ")
 PP_8d_161 = PP_8d_161[, 1:3]
 PP_8d_169 = PP_8d_169[, 1:3]
 PP_8d_177 = PP_8d_177[, 1:3]
@@ -161,14 +222,19 @@ out_pp_8d[out_pp_8d== -9999] <-NA
 priProOSD <- out_pp_8d %>% as_tibble() %>%
   left_join(out_pp_mon %>% as_tibble()) %>%
   dplyr::select(-lat, -long)
-write.table(priProOSD, "priProOSD.csv", sep=",", quote=F, row.names=F)
+write.table(priProOSD, "osd2014_ancillary_data/data/priProOSD.csv", sep=",", quote=F, row.names=F)
 
-library(RPostgreSQL)  # loads the PostgreSQL driver
-drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
-con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
-dbWriteTable(con, c("osd_analysis", "osd2014_phenology_data"), value=priProOSD,overwrite=TRUE,row.names=FALSE)
+# library(RPostgreSQL)  # loads the PostgreSQL driver
+# drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
+# con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
+# dbWriteTable(con, c("osd_analysis", "osd2014_phenology_data"), value=priProOSD,overwrite=TRUE,row.names=FALSE)
 
 
+# BEGIN: Save objects ------------------------------------------------------------
+# WARNING!!! You might not want to run this code --------------------------
+save.image(file = "osd2014_ancillary_data/data/osd2014_phenology_data_get.Rdata")
+save(priProOSD, file = "osd2014_ancillary_data/data/osd2014_phenology_data.Rdata")
+# END: Save objects ------------------------------------------------------------
 
 
 
