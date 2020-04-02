@@ -294,7 +294,7 @@ out <- out %>%
 # BEGIN: Save objects ------------------------------------------------------------
 # WARNING!!! You might not want to run this code --------------------------
 save.image(file = "osd2014_ancillary_data/data/osd2014_woa13_data_get.Rdata")
-save(dt, file = "osd2014_ancillary_data/data/osd2014_woa13_data.Rdata")
+save(out, file = "osd2014_ancillary_data/data/osd2014_woa13_data.Rdata")
 # END: Save objects ------------------------------------------------------------
 
 

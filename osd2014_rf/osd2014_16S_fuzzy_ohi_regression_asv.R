@@ -58,12 +58,12 @@ print(p)
 
 # Select those samples that are impacted and at least in 2km from the shore
 halpern_impact <- out_rescaled_2013_median_long %>%
-  filter(buffer == "1km", ohi_variable == "global_cumul_impact") %>%
+  filter(buffer == "5km", ohi_variable == "global_cumul_impact") %>%
   mutate(class = ifelse(median <= 0, "non_impacted",
                         ifelse((median > 0.01 & median <= 4.8), "low_impacted",
                                "impacted"))) %>%
   filter(median != 0, class != "non_impacted")  %>%
-  filter(class == "low_impacted" | (class == "impacted" & median > 6)) %>%
+  filter(class == "low_impacted" | (class == "impacted")) %>% # & median > 6)) %>%
   left_join(osd2014_cdata) %>%
   #filter(dist_coast_m <= 5000) %>%
   filter(label %in% osd2014_amp_mg_intersect$label)
@@ -147,6 +147,21 @@ osd2014_dada2_phyloseq_beta_filt <- prune_taxa(df_nodes$asv, osd2014_dada2_phylo
 
 
 
+
+
+osd2014_dada2_phyloseq_alpha_filt <- subset_samples(osd2014_dada2_phyloseq_alpha, label %in% halpern_impact$label)
+osd2014_dada2_phyloseq_alpha_filt <- prune_taxa(taxa_sums(osd2014_dada2_phyloseq_alpha_filt) > 0, osd2014_dada2_phyloseq_alpha_filt)
+rare_taxa <- microbiome::rare_members(osd2014_dada2_phyloseq_alpha_filt, prevalence = 20/100)
+osd2014_dada2_phyloseq_alpha_norare <- microbiome::remove_taxa(rare_taxa, osd2014_dada2_phyloseq_alpha_filt)
+#osd2014_dada2_phyloseq_alpha_norare <- proportion(osd2014_dada2_phyloseq_alpha_norare)
+
+osd2014_dada2_phyloseq_beta_filt <- prune_taxa(df_nodes$asv, osd2014_dada2_phyloseq_alpha_norare)
+osd2014_dada2_phyloseq_beta_filt <- microbiome::transform(osd2014_dada2_phyloseq_beta_filt, transform = "compositional")
+osd2014_dada2_phyloseq_beta_filt <- microbiome::transform(osd2014_dada2_phyloseq_beta_filt, transform = "log10p")
+
+
+
+
 # START -------------------------------------------------------------------
 #
 # asv_otutable <- phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_filt)
@@ -210,13 +225,13 @@ osd2014_dada2_phyloseq_beta_filt <- prune_taxa(df_nodes$asv, osd2014_dada2_phylo
 #osd2014_dada2_phyloseq_beta_filt <- prune_taxa(taxa_sums(osd2014_dada2_phyloseq_beta_filt) > 0, osd2014_dada2_phyloseq_beta_filt)
 osd2014_dada2_phyloseq_beta_df <- (as(otu_table(osd2014_dada2_phyloseq_beta_filt), "matrix")) %>% as_tibble(rownames = "label") %>%
   inner_join(halpern_impact %>%
-               select(label, class)) %>%
+               select(label, median)) %>%
   as.data.frame() %>%
   column_to_rownames("label")
 dim(osd2014_dada2_phyloseq_beta_df)
 
 
-osd2014_dada2_phyloseq_beta_df$class <- as.factor(osd2014_dada2_phyloseq_beta_df$class)
+osd2014_dada2_phyloseq_beta_df$median <- as.numeric(osd2014_dada2_phyloseq_beta_df$median)
 dim(osd2014_dada2_phyloseq_beta_df)
 # osd2014_dada2_phyloseq_beta_df<-asv_otutable_filt_pa
 
@@ -228,7 +243,7 @@ ff_predict <- vector(mode = "list")
 ff_accuracy <- vector(mode = "list")
 set.seed(11)
 for (i in 1:5){
-  training.samples <- osd2014_dada2_phyloseq_beta_df$class %>%
+  training.samples <- osd2014_dada2_phyloseq_beta_df$median %>%
     createFolds(returnTrain = TRUE)
   #createDataPartition(p = 0.8, list = FALSE)
   ff_training[[i]] <- training.samples
@@ -254,7 +269,7 @@ for (i in 1:5){
                                     min_ntree = min_ntree,
                                     ntree_factor = ntree_factor,
                                     mtry_factor = mtry_factor)
-    train.data$class <- as.factor(train.data$class)
+    train.data$median <- as.numeric(train.data$median)
     cat(paste0("Rep: ", i, " Fold: ", o, " # FuzzyForest\n"))
     ff_fit <- ff(train.data[,1:ncol(train.data) - 1], train.data[,ncol(train.data)], module_membership = module_membership,
                  screen_params = screen_params, select_params=select_params,
@@ -264,21 +279,23 @@ for (i in 1:5){
     cat(paste0("Rep: ", i, " Fold: ", o, " # Predict\n"))
     pred_asv <- predict(ff_fit$final_rf, newdata = test.data[,1:ncol(test.data) - 1])
     ff_predict[[paste0("iter_",i,"_fold_",o)]] <- pred_asv
-
-    test.data$rightPred <- pred_asv == test.data$class
-    cat(paste0("Rep: ", i, " Fold: ", o, " # Accuracy\n"))
-    accuracy <- sum(test.data$rightPred)/nrow(test.data)
-    ff_accuracy[[paste0("iter_",i,"_fold_",o)]] <- accuracy
+    test.data$rightPred <- pred_asv == test.data$median
+    cat(paste0("Rep: ", i, " Fold: ", o, " # RMSE\n"))
+    rmse <- RMSE(pred_asv, test.data$median)
+    ff_rmse[[paste0("iter_",i,"_fold_",o)]] <- rmse
     cat(paste0("Rep: ", i, " Fold: ", o, " # Done\n"))
   }
 }
 
 
-bind_rows(map(1:50, get_accuracy)) %>% ggplot(aes(y = value, x = "accuracy")) +
+get_rmse <- function(X){
+  ff_rmse[[X]] %>% as_tibble() %>% mutate(run = names(ff_predict[X]))
+}
+bind_rows(map(1:50, get_rmse)) %>% ggplot(aes(y = value, x = "accuracy")) +
   ggpol::geom_boxjitter(jitter.shape = 21, jitter.color = "black", jitter.alpha = 1,
                         color = "black", alpha = 1, errorbar.draw = TRUE, jitter.height = 0.05, jitter.width = 0.075, width = 0.4, errorbar.length = 0.2) +
   theme_bw() +
-  ylab("Accuracy") +
+  ylab("RMSE") +
   xlab("")+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())

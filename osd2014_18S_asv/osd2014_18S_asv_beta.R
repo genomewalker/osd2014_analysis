@@ -7,6 +7,7 @@ library(microbiomeSeq)
 library(GUniFrac)
 library(ggpubr)
 library(DESeq2)
+
 # BEGIN: WARNING!!!! -------------------------------------------------------------
 # You can access to the data used in this analysis in several ways:
 # 1. You have a copy of the PostgreSQL DB
@@ -20,8 +21,8 @@ library(DESeq2)
 # Uncomment if you want to use it. Some of the analysis step might require long
 # computational times and you might want to use a computer with many cores/CPUs
 
-# load("osd2014_16S_asv/data/osd2014_16S_asv_beta.Rdata", verbose = TRUE)
-# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_beta.Rdata"), verbose = TRUE)
+# load("osd2014_18S_asv/data/osd2014_18S_asv_beta.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_beta.Rdata"), verbose = TRUE)
 
 # END: WARNING!! ---------------------------------------------------------------
 
@@ -56,27 +57,25 @@ osd2014_simka_k21_bc <- tbl(my_db, "osd2014_simka_k21_bc") %>%
   collect(n = Inf)
 
 
-# If downloaded file at osd2014_16S_asv/data/ use:
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_asv_pina_tina_results.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_mitag_qiime97_phyloseq.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_bMNTD_bNTI_results.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_rc-analysis_9999.Rda", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_simka_bc.Rdata", verbose = TRUE)
+# If downloaded file at osd2014_18S_asv/data/ use:
+load("osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_asv_pina_tina_results.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_bMNTD_bNTI_results.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_rc-analysis_9999.Rda", verbose = TRUE)
 
 # Basic contextual data
-load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
 
 # If remote use
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_pina_tina_results.Rdata"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_mitag_qiime97_phyloseq.Rdata"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_bMNTD_bNTI_results.Rda"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_rc-analysis_9999.Rda"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_simka_bc.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_pina_tina_results.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_mitag_qiime97_phyloseq.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_bMNTD_bNTI_results.Rda"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_rc-analysis_9999.Rda"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_simka_bc.Rdata"), verbose = TRUE)
 
 # Basic contextual data
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
 # Load necessary data -----------------------------------------------------
 
 # END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
@@ -110,91 +109,91 @@ otu_table(osd2014_dada2_phyloseq_beta_rar_norm) <- otu_table(counts(diagdds, nor
 
 # Explore relationships between distances ---------------------------------
 
-osd2014_16S_asv_tina_uw <- osd2014_pina_tina_results[[1]]$cs %>%
+osd2014_18S_asv_tina_uw <- osd2014_pina_tina_results[[1]]$cs %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = osd2014_pina_tina_results[[1]]$name) %>%
   as_tibble()
-osd2014_16S_asv_tina_w <- osd2014_pina_tina_results[[2]]$cs %>%
+osd2014_18S_asv_tina_w <- osd2014_pina_tina_results[[2]]$cs %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = osd2014_pina_tina_results[[2]]$name) %>%
   as_tibble()
-osd2014_16S_asv_tina_uw_filt <- osd2014_pina_tina_results[[3]]$cs %>%
+osd2014_18S_asv_tina_uw_filt <- osd2014_pina_tina_results[[3]]$cs %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = osd2014_pina_tina_results[[3]]$name) %>%
   as_tibble()
-osd2014_16S_asv_tina_w_filt <- osd2014_pina_tina_results[[4]]$cs %>%
+osd2014_18S_asv_tina_w_filt <- osd2014_pina_tina_results[[4]]$cs %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = osd2014_pina_tina_results[[4]]$name) %>%
   as_tibble()
-osd2014_16S_asv_pina_uw <- osd2014_pina_tina_results[[5]]$cs %>%
+osd2014_18S_asv_pina_uw <- osd2014_pina_tina_results[[5]]$cs %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = osd2014_pina_tina_results[[5]]$name) %>%
   as_tibble()
-osd2014_16S_asv_pina_w <- osd2014_pina_tina_results[[6]]$cs %>%
+osd2014_18S_asv_pina_w <- osd2014_pina_tina_results[[6]]$cs %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = osd2014_pina_tina_results[[6]]$name) %>%
   as_tibble()
-osd2014_16S_asv_bc <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, "bray") %>%
+osd2014_18S_asv_bc <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, "bray") %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Bray-Curtis") %>%
   as_tibble()
 
-osd2014_16S_asv_bc_rar <- phyloseq::distance(osd2014_dada2_phyloseq_beta_rar_prop, "bray") %>%
+osd2014_18S_asv_bc_rar <- phyloseq::distance(osd2014_dada2_phyloseq_beta_rar_prop, "bray") %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Bray-Curtis rar") %>%
   as_tibble()
 
-osd2014_16S_asv_jc <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, method = "jaccard", binary = FALSE) %>%
+osd2014_18S_asv_jc <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, method = "jaccard", binary = FALSE) %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Jaccard") %>%
   as_tibble()
 
-osd2014_mitag_qiime97_phyloseq_t <- phyloseq:::veganifyOTU(osd2014_mitag_qiime97_phyloseq)
-osd2014_mitag_qiime97_phyloseq_t <- osd2014_mitag_qiime97_phyloseq_t[rownames(osd2014_pina_tina_results[[4]]$cs), ]
-osd2014_mitag_bc <- vegan::vegdist(osd2014_mitag_qiime97_phyloseq_t) %>%
-  as.dist() %>%
-  broom::tidy() %>%
-  mutate(class = "Bray-Curtis") %>%
-  as_tibble()
+# osd2014_mitag_qiime97_phyloseq_t <- phyloseq:::veganifyOTU(osd2014_mitag_qiime97_phyloseq)
+# osd2014_mitag_qiime97_phyloseq_t <- osd2014_mitag_qiime97_phyloseq_t[rownames(osd2014_pina_tina_results[[4]]$cs), ]
+# osd2014_mitag_bc <- vegan::vegdist(osd2014_mitag_qiime97_phyloseq_t) %>%
+#   as.dist() %>%
+#   broom::tidy() %>%
+#   mutate(class = "Bray-Curtis") %>%
+#   as_tibble()
 
 
-osd2014_16S_asv_wu <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, method = "wunifrac") %>%
+osd2014_18S_asv_wu <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, method = "wunifrac") %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Weighted Unifrac") %>%
   as_tibble()
 
-osd2014_16S_asv_wu_rar <- phyloseq::distance(osd2014_dada2_phyloseq_beta_rar_prop, method = "wunifrac") %>%
+osd2014_18S_asv_wu_rar <- phyloseq::distance(osd2014_dada2_phyloseq_beta_rar_prop, method = "wunifrac") %>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Weighted Unifrac rar") %>%
   as_tibble()
 
 
-osd2014_16S_asv_gu <- GUniFrac(otu.tab = phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_vst), phy_tree(osd2014_dada2_phyloseq_beta_vst))$unifracs[, , "d_0.5"]%>%
+osd2014_18S_asv_gu <- GUniFrac(otu.tab = phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_vst), phy_tree(osd2014_dada2_phyloseq_beta_vst))$unifracs[, , "d_0.5"]%>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Generalised Unifrac") %>%
   as_tibble()
 
-osd2014_16S_asv_gu_rar <- GUniFrac(otu.tab = phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_rar_prop), phy_tree(osd2014_dada2_phyloseq_beta_rar))$unifracs[, , "d_0.5"]%>%
+osd2014_18S_asv_gu_rar <- GUniFrac(otu.tab = phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_rar_prop), phy_tree(osd2014_dada2_phyloseq_beta_rar))$unifracs[, , "d_0.5"]%>%
   as.dist() %>%
   broom::tidy() %>%
   mutate(class = "Generalised Unifrac rar") %>%
   as_tibble()
 
 
-osd2014_16S_asv_tina_uw %>%
-  left_join(osd2014_16S_asv_tina_w, by = c("item1", "item2")) %>% mutate(class = "TINA, unweighted vs TINA, weighted") %>%
+osd2014_18S_asv_tina_uw %>%
+  left_join(osd2014_18S_asv_tina_w, by = c("item1", "item2")) %>% mutate(class = "TINA, unweighted vs TINA, weighted") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -204,8 +203,8 @@ osd2014_16S_asv_tina_uw %>%
   xlab("TINA, unweighted") +
   ylab("TINA, weighted")
 
-osd2014_16S_asv_pina_uw %>%
-  left_join(osd2014_16S_asv_pina_w, by = c("item1", "item2")) %>% mutate(class = "PINA, unweighted vs PINA, weighted") %>%
+osd2014_18S_asv_pina_uw %>%
+  left_join(osd2014_18S_asv_pina_w, by = c("item1", "item2")) %>% mutate(class = "PINA, unweighted vs PINA, weighted") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -217,8 +216,8 @@ osd2014_16S_asv_pina_uw %>%
   theme_bw() +
   stat_cor()
 
-osd2014_16S_asv_tina_w %>%
-  left_join(osd2014_16S_asv_pina_w, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs PINA, weighted") %>%
+osd2014_18S_asv_tina_w %>%
+  left_join(osd2014_18S_asv_pina_w, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs PINA, weighted") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -230,8 +229,8 @@ osd2014_16S_asv_tina_w %>%
   theme_bw() +
   stat_cor()
 
-osd2014_16S_asv_tina_w %>%
-  left_join(osd2014_16S_asv_bc, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs ASV BC") %>%
+osd2014_18S_asv_tina_w %>%
+  left_join(osd2014_18S_asv_bc, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs ASV BC") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -243,18 +242,18 @@ osd2014_16S_asv_tina_w %>%
   theme_bw() +
   stat_cor()
 
-osd2014_16S_asv_tina_w %>%
-  left_join(osd2014_mitag_bc, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs miTAG BC") %>%
-  ggplot(aes(distance.x, distance.y)) +
-  geom_point() +
-  geom_smooth() +
-  geom_abline() +
-  xlim(c(0,1)) +
-  ylim(c(0,1)) +
-  xlab("TINA, weighted") +
-  ylab("miTAG BC")
+# osd2014_18S_asv_tina_w %>%
+#   left_join(osd2014_mitag_bc, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs miTAG BC") %>%
+#   ggplot(aes(distance.x, distance.y)) +
+#   geom_point() +
+#   geom_smooth() +
+#   geom_abline() +
+#   xlim(c(0,1)) +
+#   ylim(c(0,1)) +
+#   xlab("TINA, weighted") +
+#   ylab("miTAG BC")
 
-osd2014_16S_asv_tina_w %>%
+osd2014_18S_asv_tina_w %>%
   left_join(osd2014_simka_k21_bc, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs SIMKA BC k=21") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
@@ -265,7 +264,7 @@ osd2014_16S_asv_tina_w %>%
   xlab("TINA, weighted") +
   ylab("SIMKA BC k=21")
 
-osd2014_16S_asv_tina_w %>%
+osd2014_18S_asv_tina_w %>%
   left_join(osd2014_simka_k31_bc, by = c("item1", "item2")) %>% mutate(class = "TINA, weighted vs SIMKA BC k=31") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
@@ -276,7 +275,7 @@ osd2014_16S_asv_tina_w %>%
   xlab("TINA, weighted") +
   ylab("SIMKA BC k=31")
 
-osd2014_16S_asv_bc %>%
+osd2014_18S_asv_bc %>%
   left_join(osd2014_simka_k21_bc, by = c("item1", "item2")) %>% mutate(class = "ASV BC vs SIMKA BC k=21") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
@@ -287,7 +286,7 @@ osd2014_16S_asv_bc %>%
   xlab("ASV BC") +
   ylab("SIMKA BC k=21")
 
-osd2014_16S_asv_bc %>%
+osd2014_18S_asv_bc %>%
   left_join(osd2014_simka_k31_bc, by = c("item1", "item2")) %>% mutate(class = "ASV BC vs SIMKA BC k=31") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
@@ -298,8 +297,8 @@ osd2014_16S_asv_bc %>%
   xlab("ASV BC") +
   ylab("SIMKA BC k=31")
 
-osd2014_16S_asv_bc %>%
-  left_join(osd2014_16S_asv_bc_rar, by = c("item1", "item2")) %>% mutate(class = "ASV BC vs ASV BC rar") %>%
+osd2014_18S_asv_bc %>%
+  left_join(osd2014_18S_asv_bc_rar, by = c("item1", "item2")) %>% mutate(class = "ASV BC vs ASV BC rar") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -311,21 +310,21 @@ osd2014_16S_asv_bc %>%
   theme_bw() +
   stat_cor()
 
-osd2014_16S_asv_bc %>%
-  left_join(osd2014_mitag_bc, by = c("item1", "item2")) %>% mutate(class = "ASV BC vs miTAG BC") %>%
-  ggplot(aes(distance.x, distance.y)) +
-  geom_point() +
-  geom_smooth() +
-  geom_abline() +
-  xlim(c(0,1)) +
-  ylim(c(0,1)) +
-  xlab("ASV BC") +
-  ylab("miTAG BC") +
-  theme_bw() +
-  stat_cor()
+# osd2014_18S_asv_bc %>%
+#   left_join(osd2014_mitag_bc, by = c("item1", "item2")) %>% mutate(class = "ASV BC vs miTAG BC") %>%
+#   ggplot(aes(distance.x, distance.y)) +
+#   geom_point() +
+#   geom_smooth() +
+#   geom_abline() +
+#   xlim(c(0,1)) +
+#   ylim(c(0,1)) +
+#   xlab("ASV BC") +
+#   ylab("miTAG BC") +
+#   theme_bw() +
+#   stat_cor()
 
-osd2014_16S_asv_wu %>%
-  left_join(osd2014_16S_asv_wu_rar, by = c("item1", "item2")) %>% mutate(class = "ASV WU vs ASV WU rar") %>%
+osd2014_18S_asv_wu %>%
+  left_join(osd2014_18S_asv_wu_rar, by = c("item1", "item2")) %>% mutate(class = "ASV WU vs ASV WU rar") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -335,8 +334,8 @@ osd2014_16S_asv_wu %>%
   theme_bw() +
   stat_cor()
 
-osd2014_16S_asv_gu %>%
-  left_join(osd2014_16S_asv_gu_rar, by = c("item1", "item2")) %>% mutate(class = "ASV GU vs ASV GU rar") %>%
+osd2014_18S_asv_gu %>%
+  left_join(osd2014_18S_asv_gu_rar, by = c("item1", "item2")) %>% mutate(class = "ASV GU vs ASV GU rar") %>%
   ggplot(aes(distance.x, distance.y)) +
   geom_point() +
   geom_smooth() +
@@ -347,15 +346,15 @@ osd2014_16S_asv_gu %>%
   stat_cor()
 
 
-osd2014_16S_asv_tina_w_meow <- osd2014_16S_asv_tina_w_filt %>%
+osd2014_18S_asv_tina_w_meow <- osd2014_18S_asv_tina_w_filt %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label"))
 
-osd2014_16S_asv_pina_w_meow <- osd2014_16S_asv_pina_w %>%
+osd2014_18S_asv_pina_w_meow <- osd2014_18S_asv_pina_w %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label"))
 
-osd2014_16S_asv_bc_meow <- osd2014_16S_asv_bc%>%
+osd2014_18S_asv_bc_meow <- osd2014_18S_asv_bc%>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label"))
 
@@ -363,20 +362,20 @@ osd2014_simka_k21_bc_meow <- osd2014_simka_k21_bc%>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label"))
 
-osd2014_16S_asv_gu_meow <- osd2014_16S_asv_gu %>%
+osd2014_18S_asv_gu_meow <- osd2014_18S_asv_gu %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item1" = "label")) %>%
   left_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label"))
 
-bind_rows(osd2014_16S_asv_tina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+bind_rows(osd2014_18S_asv_tina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             mutate(class = "TINA weighted"),
-          osd2014_16S_asv_pina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+          osd2014_18S_asv_pina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             mutate(class = "PINA unweighted"),
-          osd2014_16S_asv_bc_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+          osd2014_18S_asv_bc_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             mutate(class = "ASV BC"),
-          osd2014_16S_asv_gu_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+          osd2014_18S_asv_gu_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             mutate(class = "ASV GU")
           # osd2014_simka_k21_bc_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
@@ -388,16 +387,16 @@ bind_rows(osd2014_16S_asv_tina_w_meow %>% mutate( same_region = ifelse(meow_prov
   facet_wrap(~meow_region.x, scales = "free")
 
 
-bind_rows(osd2014_16S_asv_tina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+bind_rows(osd2014_18S_asv_tina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             filter(same_region ==  TRUE) %>% mutate(class = "TINA weighted"),
-          osd2014_16S_asv_pina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+          osd2014_18S_asv_pina_w_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             filter(same_region ==  TRUE) %>% mutate(class = "PINA unweighted"),
-          osd2014_16S_asv_bc_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+          osd2014_18S_asv_bc_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             filter(same_region ==  TRUE) %>% mutate(class = "ASV BC"),
-          osd2014_16S_asv_gu_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
+          osd2014_18S_asv_gu_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
             filter(!(is.na(meow_region.x) | is.na(meow_region.y))) %>%
             filter(same_region ==  TRUE) %>% mutate(class = "ASV GU")
           # osd2014_simka_k21_bc_meow %>% mutate( same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE)) %>%
@@ -409,13 +408,11 @@ bind_rows(osd2014_16S_asv_tina_w_meow %>% mutate( same_region = ifelse(meow_prov
   facet_wrap(~meow_region.x, scales = "free")
 
 
-osd2014_cdata_df <- osd2014_cdata %>% filter(!is.na(meow_region)) %>% as.data.frame() %>% column_to_rownames("label")
-
-
-
 
 # We will select wTINA, gUNIFRAC and BC -----------------------------------
-selected_samples <- osd2014_cdata %>% filter(!is.na(meow_region)) %>% .$label
+osd2014_cdata_df <- osd2014_cdata %>% filter(label %in% sample_names(osd2014_dada2_phyloseq_beta), !is.na(meow_region)) %>% as.data.frame() %>% column_to_rownames("label")
+
+selected_samples <- osd2014_cdata %>% filter(label %in% sample_names(osd2014_dada2_phyloseq_beta), !is.na(meow_region)) %>% .$label
 osd2014_dada2_phyloseq_beta_vst_sel <- prune_samples(selected_samples, osd2014_dada2_phyloseq_beta_vst)
 osd2014_dada2_phyloseq_beta_vst_sel <-  prune_taxa(taxa_sums(osd2014_dada2_phyloseq_beta_vst_sel) > 0, osd2014_dada2_phyloseq_beta_vst_sel)
 
@@ -468,7 +465,7 @@ p2 <- ggplot() +
 p2
 
 ggarrange(p1, p2, legend = "top")
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_dada2_phyloseq_beta_nmds.pdf", width = 6, height = 4)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_dada2_phyloseq_beta_nmds.pdf", width = 6, height = 4)
 
 
 # p1 <- ggplot() +
@@ -636,8 +633,7 @@ ggplot(osd2014_permanova_results, aes(x = class, y = r2, fill = signif)) +
   ylab("Permanova R2") +
   theme(legend.position = "top")
 
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_dada2_phyloseq_beta_permanova.pdf", width = 4, height = 3)
-
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_dada2_phyloseq_beta_permanova.pdf", width = 4, height = 3)
 
 
 
@@ -698,7 +694,7 @@ no_selection_bNTI <- broom::tidy(as.dist(weighted.bNTI)) %>%
   inner_join(osd2014_cdata %>% select(label, meow_province, meow_region), by = c("item2" = "label")) %>%
   mutate(same_region = ifelse(meow_province.x ==  meow_province.y, TRUE, FALSE), selection = ifelse(abs(bNTI) > 2, TRUE, FALSE)) %>%
   filter(item1 %in% selected_samples, item2 %in% selected_samples, same_region == TRUE, selection == FALSE) %>%
-  inner_join(osd2014_16S_rc_results_9999) %>%
+  inner_join(osd2014_18S_rc_results_9999) %>%
   mutate(rc_type = case_when(rc > 0.95 ~ "Dispersal limitation",
                              rc < -0.95 ~ "Homogenizing dispersal",
                              TRUE ~ "Undominated" ))
@@ -782,12 +778,14 @@ bind_rows(bMNTD %>% select(item1, item2, selection, type_selection, meow_provinc
   scale_y_continuous(labels = scales::percent) +
   theme(legend.position = "top")
 
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_dada2_phyloseq_beta_selection.pdf", width = 6, height = 8)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_dada2_phyloseq_beta_selection.pdf", width = 6, height = 8)
 
 # Exploring bray-curtis/TINA divergence between transects -----------------
 seq_bc <- function(X){
   l <- st_100_order_terrestrial %>%
-    filter(label %in% (osd2014_cdata %>% filter(eval(parse(text = X))) %>% .$label))  %>% .$label %>% combn(, m = 2) %>% t %>%
+    filter(label %in% (osd2014_cdata %>% filter(eval(parse(text = X))) %>% .$label))  %>%
+    filter(label %in% selected_samples) %>%
+    .$label %>% combn(, m = 2) %>% t %>%
     as_tibble() %>%
     inner_join(st_100_order_terrestrial, by = c("V1" = "label"))  %>%
     inner_join(st_100_order_terrestrial, by = c("V2" = "label")) %>%
@@ -818,7 +816,9 @@ seq_bc <- function(X){
 
 seq_tina <- function(X){
   l <- st_100_order_terrestrial %>%
-    filter(label %in% (osd2014_cdata %>% filter(eval(parse(text = X))) %>% .$label))  %>% .$label %>% combn(, m = 2) %>% t %>%
+    filter(label %in% (osd2014_cdata %>% filter(eval(parse(text = X))) %>% .$label))  %>%
+    filter(label %in% selected_samples) %>%
+    .$label %>% combn(, m = 2) %>% t %>%
     as_tibble() %>%
     inner_join(st_100_order_terrestrial, by = c("V1" = "label"))  %>%
     inner_join(st_100_order_terrestrial, by = c("V2" = "label")) %>%
@@ -908,14 +908,14 @@ lus_seq <- ggplot() +
 
 ggpubr::ggarrange(nwa_seq, lus_seq, med_seq, nes_seq, common.legend = TRUE, labels = c("a", "b", "c", "d"))
 
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_dada2_phyloseq_beta_seqBC.pdf", width = 7, height = 4)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_dada2_phyloseq_beta_seqBC.pdf", width = 7, height = 4)
 
 # Distance decay ----------------------------------------------------------
 
 
 
 osd2014_haversine_distance %>%
-  inner_join(osd2014_16S_asv_bc) %>%
+  inner_join(osd2014_18S_asv_bc) %>%
   filter(same_region == TRUE, meow_province.x %in% osd2014_selected_meow_provinces$meow_province) %>%
   mutate(meow_region = ifelse(grepl("east", meow_region.x), meow_province.x, meow_region.x)) %>%
   select(haversine, distance, meow_region) %>%
@@ -926,7 +926,7 @@ osd2014_haversine_distance %>%
   theme_bw()
 
 osd2014_haversine_distance %>%
-  inner_join(osd2014_16S_asv_tina_w) %>%
+  inner_join(osd2014_18S_asv_tina_w) %>%
   filter(same_region == TRUE, meow_province.x %in% osd2014_selected_meow_provinces$meow_province) %>%
   ggplot(aes(haversine/1000, distance)) +
   geom_point() +
@@ -938,7 +938,7 @@ osd2014_haversine_distance %>%
 # Mantel & p-Mantel tests -------------------------------------------------
 
 
-osd2014_16S_asv_bc_w <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, "bray")
+osd2014_18S_asv_bc_w <- phyloseq::distance(osd2014_dada2_phyloseq_beta_vst, "bray")
 
 osd2014_coords <- osd2014_cdata %>%
   collect(n = Inf) %>%
@@ -952,7 +952,7 @@ rownames(osd2014_haversine) <- rownames(osd2014_coords)
 colnames(osd2014_haversine) <- rownames(osd2014_coords)
 osd2014_haversine <- as.dist(osd2014_haversine)
 
-osd2014_16S_asv_gu_w <- as.dist(GUniFrac(otu.tab = phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_vst), phy_tree(osd2014_dada2_phyloseq_beta_vst))$unifracs[, , "d_0.5"])
+osd2014_18S_asv_gu_w <- as.dist(GUniFrac(otu.tab = phyloseq:::veganifyOTU(osd2014_dada2_phyloseq_beta_vst), phy_tree(osd2014_dada2_phyloseq_beta_vst))$unifracs[, , "d_0.5"])
 
 osd2014_delta_temp <- with(osd2014_cdata %>% select(label, water_temperature), abs(outer(water_temperature, water_temperature, "-")))
 dimnames(osd2014_delta_temp) <- list(osd2014_cdata$label, osd2014_cdata$label)
@@ -960,10 +960,11 @@ osd2014_delta_temp <- as.dist(osd2014_delta_temp)
 
 
 calculate_mantel_bc <- function(X, Y) {
-  labels <- osd2014_cdata %>% filter(eval(parse(text = X))) %>% .$label
+  labels <- osd2014_cdata %>% filter(eval(parse(text = X))) %>%
+    filter(label %in% selected_samples) %>% .$label
   osd2014_haversine_sel <- as.matrix(osd2014_haversine)[labels, labels] %>% as.dist()
   osd2014_delta_temp_sel <- as.matrix(osd2014_delta_temp)[labels, labels] %>% as.dist()
-  osd2014_bc_sel <- as.matrix(osd2014_16S_asv_bc_w)[labels, labels] %>% as.dist()
+  osd2014_bc_sel <- as.matrix(osd2014_18S_asv_bc_w)[labels, labels] %>% as.dist()
   m <- mantel(osd2014_bc_sel, osd2014_haversine_sel)
   m_p <- mantel.partial(osd2014_bc_sel, osd2014_haversine_sel, osd2014_delta_temp_sel)
   l <- Y
@@ -998,22 +999,24 @@ mantel_lus$mantel.corr %>% plot
 
 
 calculate_mantel_phylo <- function(X, Y) {
-  labels <- osd2014_cdata %>% filter(eval(parse(text = X))) %>% .$label
-  osd2014_16S_asv_gu_w_sel <- (beta.mntd.weighted)[labels, labels] %>% as.dist()
+  labels <- osd2014_cdata %>% filter(eval(parse(text = X))) %>%
+    filter(label %in% selected_samples) %>%
+    .$label
+  osd2014_18S_asv_gu_w_sel <- (beta.mntd.weighted)[labels, labels] %>% as.dist()
   osd2014_delta_temp_sel <- as.matrix(osd2014_delta_temp)[labels, labels] %>% as.dist()
-  osd2014_bc_sel <- as.matrix(osd2014_16S_asv_bc_w)[labels, labels] %>% as.dist()
-  m <- mantel(osd2014_bc_sel, osd2014_16S_asv_gu_w_sel)
-  m_p <- mantel.partial(osd2014_bc_sel, osd2014_16S_asv_gu_w_sel, osd2014_delta_temp_sel)
+  osd2014_bc_sel <- as.matrix(osd2014_18S_asv_bc_w)[labels, labels] %>% as.dist()
+  m <- mantel(osd2014_bc_sel, osd2014_18S_asv_gu_w_sel)
+  m_p <- mantel.partial(osd2014_bc_sel, osd2014_18S_asv_gu_w_sel, osd2014_delta_temp_sel)
   l <- Y
   if(is.null(Y)){
-    m_c = mantel.correlog(D.eco = osd2014_bc_sel, D.geo = osd2014_16S_asv_gu_w_sel, r.type = "spearman")
+    m_c = mantel.correlog(D.eco = osd2014_bc_sel, D.geo = osd2014_18S_asv_gu_w_sel, r.type = "spearman")
   }else{
-    osd2014_phylo_sel_r <- osd2014_16S_asv_gu_w_sel %>%
+    osd2014_phylo_sel_r <- osd2014_18S_asv_gu_w_sel %>%
       broom::tidy() %>%
       arrange((distance)) %>%
       mutate(d_class =( l * trunc(distance/l, 1))+ l ) %>%
       .$d_class %>% unique
-    m_c = mantel.correlog(D.eco = osd2014_bc_sel, D.geo = osd2014_16S_asv_gu_w_sel, r.type = "spearman", break.pts = osd2014_phylo_sel_r)
+    m_c = mantel.correlog(D.eco = osd2014_bc_sel, D.geo = osd2014_18S_asv_gu_w_sel, r.type = "spearman", break.pts = osd2014_phylo_sel_r)
   }
   list(mantel = m, mantel.partial = m_p, mantel.corr = m_c)
 }
@@ -1034,5 +1037,5 @@ mantel_lus$mantel.corr %>% plot
 
 # BEGIN: Save objects ------------------------------------------------------------
 # WARNING!!! You might not want to run this code --------------------------
-save.image("osd2014_16S_asv/data/osd2014_16S_asv_beta.Rdata")
+save.image("osd2014_18S_asv/data/osd2014_18S_asv_beta.Rdata")
 # END: Save objects ------------------------------------------------------------

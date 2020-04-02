@@ -8,8 +8,8 @@ library(caret)
 library(ggpubr)
 source("osd2014_16S_asv/lib/fuzzyforest_lib.R")
 
-load("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata")
+load("osd2014_18S_asv/data/osd2014_18S_asv_networks_results.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects.Rdata")
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
 
 # Get OHI data and define impacted/non-impacted ---------------------------
@@ -22,9 +22,6 @@ osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
 osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
   collect(n = Inf)
 
-osd2014_silva_dada2_names <- tbl(my_db, "osd2014_silva_dada2") %>%
-  collect(n = Inf) %>%
-  select(asv, asv_name)
 
 # Get Halpern data
 out_rescaled_2013_median_long <- tbl(my_db, "osd2014_halpern_scaled_median") %>%
@@ -311,14 +308,14 @@ all_comps <- bind_rows(
                  as_tibble(rownames = "label") %>%
                  gather(asv, prop, -label)) %>%
     mutate(label = fct_relevel(label, osd2014_order_terrestrial$label)),
-  get_g("com_2") %>%
+  get_g("com_4") %>%
     activate(nodes) %>%
     as_tibble() %>%
     inner_join(as(otu_table(osd2014_dada2_phyloseq_beta_filt), "matrix") %>%
                  as_tibble(rownames = "label") %>%
                  gather(asv, prop, -label)) %>%
     mutate(label = fct_relevel(label, osd2014_order_terrestrial$label)),
-  get_g("com_3") %>%
+  get_g("com_5") %>%
     activate(nodes) %>%
     as_tibble() %>%
     inner_join(as(otu_table(osd2014_dada2_phyloseq_beta_filt), "matrix") %>%
@@ -359,6 +356,13 @@ all_comps <- bind_rows(
     inner_join(as(otu_table(osd2014_dada2_phyloseq_beta_filt), "matrix") %>%
                  as_tibble(rownames = "label") %>%
                  gather(asv, prop, -label)) %>%
+    mutate(label = fct_relevel(label, osd2014_order_terrestrial$label)),
+  get_g("com_10") %>%
+    activate(nodes) %>%
+    as_tibble() %>%
+    inner_join(as(otu_table(osd2014_dada2_phyloseq_beta_filt), "matrix") %>%
+                 as_tibble(rownames = "label") %>%
+                 gather(asv, prop, -label)) %>%
     mutate(label = fct_relevel(label, osd2014_order_terrestrial$label))
 )  %>%
   group_by(Order) %>%
@@ -379,7 +383,7 @@ all_comps_order <- tibble(order_mod = order_mod, colour = o_colors)
 bind_graphs(
   get_g("com_1") %>%activate(nodes) %>% mutate(order_mod = ifelse(Order %in% all_comps_order$order_mod, Order, "Other")) %>%
     inner_join(all_comps_order) %>% inner_join(top_features %>% select(name, mean_imp, median_imp)),
-  get_g("com_2") %>% activate(nodes) %>% mutate(order_mod = ifelse(Order %in% all_comps_order$order_mod, Order, "Other")) %>%
+  get_g("com_4") %>% activate(nodes) %>% mutate(order_mod = ifelse(Order %in% all_comps_order$order_mod, Order, "Other")) %>%
     inner_join(all_comps_order) %>% inner_join(top_features %>% select(name, mean_imp, median_imp)),
   get_g("com_3") %>% activate(nodes) %>% mutate(order_mod = ifelse(Order %in% all_comps_order$order_mod, Order, "Other")) %>%
     inner_join(all_comps_order) %>% inner_join(top_features %>% select(name, mean_imp, median_imp)),
@@ -420,13 +424,15 @@ all_comps %>%
   filter(name %in% (top_features %>% arrange(desc(mean_imp))  %>% .$name)) %>%
   inner_join(halpern_impact) %>%
   select(label, Order, com, class, name, prop, mean_imp) %>% unique %>%
-  filter(prop > 0) %>% #compare_means(formula = prop ~ class, group.by = "com", p.adjust.method = "fdr") %>% View
+  filter(prop > 0) %>% #compare_means(formula = prop ~ class, group.by = "com", p.adjust.method = "fdr")
   ggplot(aes(class, (prop), fill = class)) +
   ggpol::geom_boxjitter(jitter.shape = 21, jitter.color = "black", jitter.alpha = 0.7, jitter.size = 1,
                         color = "black", alpha = 0.7, errorbar.draw = TRUE, jitter.height = 0.05, jitter.width = 0.075, width = 0.4, errorbar.length = 0.2) +
   scale_y_continuous(trans = scales::log_trans(),  labels = scales::percent) +
   facet_wrap(~com, scales = "free",nrow = 2) +
-  stat_compare_means(comparisons = list(c("impacted", "low_impacted")), aes(label=..p.adj..)) +
+  stat_compare_means(comparisons = list(c("impacted", "low_impacted")),
+                     aes(label = base::format.pval(..p.adj.., digits = 3)),
+                     method.args = list(p.adjust.method = "fdr")) +
   theme_bw() +
   theme(legend.position = "none") +
   scale_fill_manual(values = c("#2E3239", "#1F629A"))
@@ -438,7 +444,7 @@ plot_asv <- function(X){
     filter(name %in% (top_features %>% arrange(desc(mean_imp))  %>% .$name)) %>%
     inner_join(halpern_impact) %>%
     select(label, Order, com, class, name, prop, mean_imp) %>% unique %>%
-    filter(prop > 0, name == X) %>% #compare_means(formula = prop ~ class, group.by = "com", p.adjust.method = "fdr") %>% View
+    #filter(prop > 0, name == X) %>% #compare_means(formula = prop ~ class, group.by = "com", p.adjust.method = "fdr") %>% View
     ggplot(aes(class, (prop), fill = class)) +
     ggpol::geom_boxjitter(jitter.shape = 21, jitter.color = "black", jitter.alpha = 0.7, jitter.size = 1,
                           color = "black", alpha = 0.7, errorbar.draw = TRUE, jitter.height = 0.05, jitter.width = 0.075, width = 0.4, errorbar.length = 0.2) +
@@ -449,11 +455,37 @@ plot_asv <- function(X){
     theme(legend.position = "none") +
     scale_fill_manual(values = c("#2E3239", "#1F629A"))
 }
-ggarrange(plot_asv("asv_218"),
-          plot_asv("asv_23"),
-          plot_asv("asv_86"),
-          plot_asv("asv_22"),
-          plot_asv("asv_1361"), ncol = 4, nrow = 2)
+
+
+l<-all_comps %>%
+  filter(name %in% (top_features %>% arrange(desc(mean_imp))  %>% .$name)) %>%
+  inner_join(halpern_impact) %>%
+  select(label, Order, com, class, name, prop, mean_imp) %>% unique
+compare_means(data = l, formula = prop ~ class, group.by = "com", p.adjust.method = "fdr")
+compare_means(data = l, formula = prop ~ class, group.by = "com", p.adjust.method = "fdr")
+
+# Get top ASVs
+
+all_comps %>% select(com, mean_imp, name) %>%
+  unique() %>%
+  group_by(com) %>%
+  top_n(2, wt = mean_imp)
+
+# 1 com_1   0.00142 asv_645
+# 2 com_4   0.00158 asv_2331
+# 3 com_5   0.00360 asv_279
+# 4 com_7   0.00250 asv_1899
+# 5 com_8   0.00529 asv_61
+# 6 com_9   0.00511 asv_30
+# 7 com_10  0.00778 asv_180
+
+
+ggarrange(plot_asv("asv_279"),
+          plot_asv("asv_2331"),
+          plot_asv("asv_1899"),
+          plot_asv("asv_61"),
+          plot_asv("asv_30"),
+          plot_asv("asv_180"), ncol = 4, nrow = 2)
 
 ggsave(plot = last_plot(), filename = "osd2014_rf/figures/osd2014_fuzzyforests_bplots_ohi_asv.pdf", width = 9, height = 4)
 
@@ -554,7 +586,7 @@ save.image(file = "osd2014_rf/data/osd2014_fuzzyforest_ohi.Rda")
 #   }
 # }
 #
-# #save(names_otus, rf_random, names_otus_short, halpern_classify, halpern_impact, asv_otutable, osd2014_16s_otuXsample_physeq_filt_prev_beta_mg, file = "~/ownCloud/OSD_paper/HALPERN/halpern_classify_RF_model.Rda")
+# #save(names_otus, rf_random, names_otus_short, halpern_classify, halpern_impact, asv_otutable, osd2014_18S_otuXsample_physeq_filt_prev_beta_mg, file = "~/ownCloud/OSD_paper/HALPERN/halpern_classify_RF_model.Rda")
 # plot(asv_halpern_classify)
 #
 # print(asv_halpern_classify)
@@ -831,7 +863,7 @@ save.image(file = "osd2014_rf/data/osd2014_fuzzyforest_ohi.Rda")
 # ggsave("~/Downloads/asv_bp.pdf", width = 29.39, height = 6.92, units = "cm")
 #
 #
-# tax_table(osd2014_16s_otuXsample_physeq_filt_prev_prop) %>%
+# tax_table(osd2014_18S_otuXsample_physeq_filt_prev_prop) %>%
 #   as.data.frame() %>%
 #   rownames_to_column(var = "old") %>%
 #   tbl_df() %>%
@@ -846,7 +878,7 @@ save.image(file = "osd2014_rf/data/osd2014_fuzzyforest_ohi.Rda")
 #
 #
 # # Trim the original matrix to contain the non-training and the modules used for
-# asv_otutable_pred <- as.data.frame(as(otu_table(osd2014_16s_otuXsample_physeq_filt_prev_prop), "matrix"))
+# asv_otutable_pred <- as.data.frame(as(otu_table(osd2014_18S_otuXsample_physeq_filt_prev_prop), "matrix"))
 # asv_otutable_pred <- base::as.data.frame(asv_otutable_pred)
 # asv_otutable_pred <- asv_otutable_pred[pred_sites, c(as.character(asv_shared_impact_low_occ$asv), asv_impact_low$asv, asv_impact_imp$asv)]
 #

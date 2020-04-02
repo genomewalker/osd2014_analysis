@@ -25,8 +25,8 @@ library(phyloseq)
 # Uncomment if you want to use it. Some of the analysis step might require long
 # computational times and you might want to use a computer with many cores/CPUs
 
-# load("osd2014_16S_asv/data/osd2014_connectedness_cohesion.Rdata", verbose = TRUE)
-# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_connectedness_cohesion.Rdata"), verbose = TRUE)
+# load("osd2014_18S_asv/data/osd2014_connectedness_cohesion.Rdata", verbose = TRUE)
+# load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_connectedness_cohesion.Rdata"), verbose = TRUE)
 
 # END: WARNING!! ---------------------------------------------------------------
 
@@ -48,20 +48,20 @@ osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
 osd2014_meow_regions <- tbl(my_db, "osd2014_meow_regions") %>%
   collect(n = Inf)
 
-# If downloaded file at osd2014_16S_asv/data/ use:
+# If downloaded file at osd2014_18S_asv/data/ use:
 
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_sparcc_filtered.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_sparcc_filtered.Rdata", verbose = TRUE)
 
 # Basic contextual data
 load("osd2014_16S_asv/data/osd2014_basic_cdata.Rdata", verbose = TRUE)
 
 # If remote use
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_sparcc_filtered.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects_with_phylo.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_sparcc_filtered.Rdata"), verbose = TRUE)
 
 # Basic contextual data
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_basic_cdata.Rdata"), verbose = TRUE)
 # Load necessary data -----------------------------------------------------
 
 # END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
@@ -111,7 +111,7 @@ tax.shuffle <- T
 # Note that your correlation table MUST have the same number of taxa as the abundance table.
 # There should be no empty (all zero) taxon vectors in the abundance table.
 # Even if you input your own correlation table, the persistence cutoff will be applied
-use.custom.cors <- T
+use.custom.cors <- F
 
 ###################################################################
 ###################################################################
@@ -289,6 +289,6 @@ connectedness_df <- tibble(asv = names(connectedness.neg), connectedness_negativ
 
 # BEGIN: Save objects ------------------------------------------------------------
 # WARNING!!! You might not want to run this code --------------------------
-save.image("osd2014_16S_asv/data/osd2014_connectedness_cohesion.Rdata")
+save.image("osd2014_18S_asv/data/osd2014_connectedness_cohesion.Rdata")
 # END: Save objects ------------------------------------------------------------
 

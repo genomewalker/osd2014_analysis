@@ -2,13 +2,13 @@ library(dada2); packageVersion("dada2")
 library(tidyverse)
 
 # File parsing
-wdir <- "/Volumes/Extra/dada_2014/"
+wdir <- "osd2014_asv_inference/data/dada_2014"
 setwd(wdir)
 pathF <-  file.path(wdir, "files")
 pathR <- file.path(wdir, "files")
 
-filtpathF <- file.path(pathF, "filtered") # Filtered forward files go into the pathF/filtered/ subdirectory
-filtpathR <- file.path(pathR, "filtered") # ...
+filtpathF <- file.path(pathF, "filtered1") # Filtered forward files go into the pathF/filtered/ subdirectory
+filtpathR <- file.path(pathR, "filtered1") # ...
 
 fastqFs <- sort(list.files(pathF, pattern="R1.fastq.gz"))
 fastqRs <- sort(list.files(pathR, pattern="R2.fastq.gz"))
@@ -90,17 +90,21 @@ ggplot(track_long, aes(variable, value, fill = variable, color = variable)) +
   ylab("Number of sequences") +
   theme_bw()
 
-taxa <- assignTaxonomy(seqtab.nochim, "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_nr_v132_train_set.fa.gz", multithread=TRUE, tryRC = TRUE)
-taxa <- addSpecies(taxa, "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz")
+download.file(url = "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_nr_v132_train_set.fa.gz", destfile = "osd2014_asv_inference/data/silva_nr_v132_train_set.fa.gz")
+download.file(url = "http://osd2014.metagenomics.eu/osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz", destfile = "osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz")
+
+taxa <- assignTaxonomy(seqtab.nochim, "osd2014_asv_inference/data/silva_nr_v132_train_set.fa.gz" , multithread=TRUE, tryRC = TRUE)
+taxa <- addSpecies(taxa, "osd2014_asv_inference/data/silva_species_assignment_v132.fa.gz")
 taxa.print <- taxa # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)
 
-taxa_df <- as(taxa, "data.frame")
+taxa_df <- as(taxa, "matrix") %>% as.data.frame()
 
 taxa_df <- taxa %>%
   as_tibble(rownames = "asv") %>%
   mutate(asv_name = paste("asv", row_number(), sep = "_"))
+
 
 # read SILVA taxonomy
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
@@ -109,25 +113,23 @@ st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_terrestrial") %>%
   collect(n = Inf)
 
 osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
-  collect(n = Inf)
+  collect(n = Inf) %>%
+  add_row(label = sample.names[1]) %>%
+  add_row(label = sample.names[2]) %>%
+  add_row(label = sample.names[3])
 
 osd2014_cdata <- as.data.frame(osd2014_cdata)
 rownames(osd2014_cdata) <- osd2014_cdata$label
 
-osd2014_silva_dada2 <- tbl(my_db, "osd2014_silva_dada2") %>%
-  collect(n = Inf)
 
-osd2014_silva_dada2_blanks <- tbl(my_db, "osd2014_silva_dada2_blanks") %>%
-  collect(n = Inf)
-
-osd2014_silva_dada2_filt <- osd2014_silva_dada2 %>%
+osd2014_silva_dada2_filt <- taxa_df %>%
   filter(Kingdom != "Eukaryota" | is.na(Kingdom)) %>%
   filter(Family != "Mitochondria" | is.na(Family)) %>%
   filter(Order != "Chloroplast" | is.na(Order)) %>%
-  filter(!(asv %in% osd2014_silva_dada2_blanks$asv)) %>%
   filter(!(is.na(Phylum)))
 
-osd2014_taxa <- as.data.frame(osd2014_silva_dada2)
+
+osd2014_taxa <- as.data.frame(taxa_df)
 rownames(osd2014_taxa) <- osd2014_taxa$asv
 osd2014_taxa$asv <- NULL
 
@@ -140,7 +142,10 @@ row.names(seqtab.nochim) <- gsub("_R1.filt.fastq.gz", "", row.names(seqtab.nochi
 osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
 
-osd2014_dada2_phyloseq_all <- phyloseq(otu_table(seqtab.nochim[,osd2014_silva_dada2$asv], taxa_are_rows=FALSE), tax_table(as.matrix(osd2014_taxa)), sample_data(osd2014_cdata))
+
+
+
+osd2014_dada2_phyloseq_all <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), tax_table(as.matrix(osd2014_taxa)), sample_data(osd2014_cdata))
 osd2014_dada2_phyloseq <- phyloseq(otu_table(seqtab.nochim[,osd2014_silva_dada2_filt$asv], taxa_are_rows=FALSE), tax_table(as.matrix(osd2014_taxa)), sample_data(osd2014_cdata))
 
 sample_sums(osd2014_dada2_phyloseq) %>% sort
@@ -169,18 +174,15 @@ chlr_prop_long %>%
   scale_y_continuous(labels = scales::percent) +
   theme(axis.text.x = element_text(size = 8, angle = 90, vjust = 0.5, hjust=1))
 
-write_tsv(osd2014_silva_dada2 %>% select(asv_name, asv), path = "osd2014_16S_asv/data/osd2014_16S_asv_sequences.tsv", col_names = FALSE)
+write_tsv(osd2014_silva_dada2 %>% select(asv_name, asv), path = "osd2014_16S_asv/data/osd2014_16S_asv_sequences_wblanks.tsv", col_names = FALSE)
 
-save(osd2014_dada2_phyloseq, osd2014_dada2_phyloseq_all, file = "osd2014_16S_asv/data/osd2014_16S_asv_physeq.Rdata")
-save(ft, errF, errR, derepFs, derepRs, dadaFs, dadaRs, mergers, seqtab, seqtab.nochim, taxa,file = "osd2014_16S_asv/data/osd2014_16S_asv_inference.Rdata")
-
-osd2014_silva_dada2 <- osd2014_silva_dada2 %>% rename(asv = X7) %>%
-  mutate(asv_name = paste("asv", row_number(), sep = "_"))
+save(osd2014_dada2_phyloseq, osd2014_dada2_phyloseq_all, file = "osd2014_16S_asv/data/osd2014_16S_asv_physeq_wblanks.Rdata")
+save(ft, errF, errR, derepFs, derepRs, dadaFs, dadaRs, mergers, seqtab, seqtab.nochim, taxa,file = "osd2014_16S_asv/data/osd2014_16S_asv_inference_wblanks.Rdata")
 
 library(RPostgreSQL)  # loads the PostgreSQL driver
 drv <- dbDriver("PostgreSQL")  # creates a connection to the postgres database  # note that "con" will be used later in each connection to the database
 con <- dbConnect(drv, dbname = "osd_analysis", host = "localhost", port = 5432)
-dbWriteTable(con, c("osd_analysis", "osd2014_silva_dada2"), value=osd2014_silva_dada2,overwrite = TRUE, row.names = FALSE)
+dbWriteTable(con, c("osd_analysis", "osd2014_silva_dada2_wblanks"), value=taxa_df,overwrite = TRUE, row.names = FALSE)
 
 
 

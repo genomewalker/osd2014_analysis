@@ -21,13 +21,13 @@ run_louvain <- function(X, graph = graph, convert_options = NULL, community_opti
   }
 
   # convert files
-  bin_file <- paste("~/Downloads/", X,"-louvain.bin", sep = "")
-  w_file <- paste("~/Downloads/", X,"-louvain_w.bin", sep = "")
+  bin_file <- paste("/tmp/", X,"-louvain.bin", sep = "")
+  w_file <- paste("/tmp/", X,"-louvain_w.bin", sep = "")
 
   # community files
-  tree_file <- paste("~/Downloads/", X,"-louvain.tree", sep = "")
+  tree_file <- paste("/tmp/", X,"-louvain.tree", sep = "")
   # hierarchy files
-  g_name <- paste("~/Downloads/", X,".tsv", sep = "")
+  g_name <- paste("/tmp/", X,".tsv", sep = "")
 
   convert_command <- paste(convert_bin, "-i", g_name, "-o", bin_file, "-w", w_file ,convert_options, sep = " ")
   community_command <- paste(community_bin, bin_file, community_options,"-w", w_file, ">", tree_file, sep = " ")
@@ -50,7 +50,7 @@ run_louvain <- function(X, graph = graph, convert_options = NULL, community_opti
   mod_louvain <- vector(mode = "list")
 
   for (i in 1:louvain_levels){
-    com_file <- paste("~/Downloads/", X,"-louvain_", i, ".com", sep = "")
+    com_file <- paste("/tmp/", X,"-louvain_", i, ".com", sep = "")
 
     hierarchy_command <- paste(hierarchy_bin, tree_file, "-l", i - 1, ">", com_file, sep = " ")
     system(hierarchy_command)
@@ -64,6 +64,10 @@ run_louvain <- function(X, graph = graph, convert_options = NULL, community_opti
   }
 
   #map_file <- paste(out_folder, "/", X, ".map", sep = "")
-
+  unlink(g_name)
+  unlink(tree_file)
+  unlink(bin_file)
+  unlink(w_file)
+  unlink(com_file)
   return(mod_louvain)
 }

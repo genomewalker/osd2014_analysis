@@ -4,15 +4,13 @@ library(phyloseq)
 library(tidyverse)
 library(tidygraph)
 library(ggraph)
-library(testforDEP)
-
 source("osd2014_16S_asv/lib/graph_lib.R")
 
 
 # BEGIN: WARNING!!!! -------------------------------------------------------------
 # You can access to the data used in this analysis in several ways:
 # 1. You have a copy of the PostgreSQL DB
-# 2. You downloaded the .Rdata files from http://osd2014.metagenomics.eu/ and placed them
+# 2. You downloaded the .Rdata files from httSG://osd2014.metagenomics.eu/ and placed them
 #    in the data folder
 # 3. You can load the files remotely, it might take a while when the file is very large
 # END: WARNING!!!! -------------------------------------------------------------
@@ -22,8 +20,8 @@ source("osd2014_16S_asv/lib/graph_lib.R")
 # Uncomment if you want to use it. Some of the analysis step might require long
 # computational times and you might want to use a computer with many cores/CPUs
 
-# load("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata", verbose = TRUE)
-# load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata"), verbose = TRUE)
+# load("osd2014_18S_asv/data/osd2014_18S_asv_networks_results.Rdata", verbose = TRUE)
+# load(url("httSG://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_networks_results.Rdata"), verbose = TRUE)
 
 # END: WARNING!! ---------------------------------------------------------------
 
@@ -35,9 +33,6 @@ source("osd2014_16S_asv/lib/graph_lib.R")
 # Use if you have the postgres DB in place
 
 my_db <- src_postgres(host = "localhost", port = 5432, dbname = "osd_analysis", options = "-c search_path=osd_analysis")
-osd2014_silva_dada2_names <- tbl(my_db, "osd2014_silva_dada2") %>%
-  collect(n = Inf) %>%
-  select(asv, asv_name)
 
 st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_terrestrial") %>%
   collect(n = Inf)
@@ -45,13 +40,13 @@ st_100_order_terrestrial <- tbl(my_db, "osd2014_st_order_terrestrial") %>%
 osd2014_amp_mg_intersect <- tbl(my_db, "osd2014_amp_mg_intersect_2018") %>%
   collect(n = Inf)
 
-osd2014_sample_cohesion <- tbl(my_db, "osd2014_sample_cohesion") %>%
-  collect(n = Inf)
+# osd2014_sample_cohesion <- tbl(my_db, "osd2014_sample_cohesion") %>%
+#   collect(n = Inf)
 
 osd2014_cdata <- tbl(my_db, "osd2014_cdata") %>%
   collect(n = Inf) %>%
   filter(label %in% osd2014_amp_mg_intersect$label) %>%
-  left_join(osd2014_sample_cohesion) %>%
+  #left_join(osd2014_sample_cohesion) %>%
   arrange(match(label, st_100_order_terrestrial$label))
 
 osd2014_mld_adata <- tbl(my_db, "osd2014_mld_data") %>%
@@ -93,29 +88,25 @@ osd2014_rescaled_2013_median_long <- tbl(my_db, "osd2014_halpern_scaled_median")
 
 
 
-# If downloaded file at osd2014_16S_asv/data/ use:
-load("osd2014_16S_asv/data/osd2014_16S_asv_networks.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata", verbose = TRUE)
-load("osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
+# If downloaded file at osd2014_18S_asv/data/ use:
+load("osd2014_18S_asv/data/osd2014_18S_asv_networks.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_sparcc_filtered.Rda", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_niche_breadth.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects.Rdata", verbose = TRUE)
 
 # Basic contextual data
-load("osd2014_16S_asv/data/osd2014_basic_cdata_networks.Rdata", verbose = TRUE)
+load("osd2014_18S_asv/data/osd2014_", verbose = TRUE)
 
 # If remote use
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_networks.Rdata"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_niche_breadth.Rdata"), verbose = TRUE)
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_16S_asv_physeq_filt_objects.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_networks.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_niche_breadth.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_18S_asv_physeq_filt_objects.Rdata"), verbose = TRUE)
 
 # Basic contextual data
-load(url("http://osd2014.metagenomics.eu/osd2014_16S_asv/data/osd2014_basic_cdata_networks.Rdata"), verbose = TRUE)
+load(url("http://osd2014.metagenomics.eu/osd2014_18S_asv/data/osd2014_basic_cdata_networks.Rdata"), verbose = TRUE)
 # Load necessary data -----------------------------------------------------
 
 # END: SKIP THIS IF YOU ALREADY LOADED ALL RESULTS AND DATA --------------------
-
-
-rm(osd2014_16S_asv_se_gl_minus2)
-rm(osd2014_16S_asv_se_mb_minus3)
-
 
 
 osd2014_sparcc_g <- osd2014_sparcc %>%
@@ -125,14 +116,14 @@ osd2014_sparcc_g <- osd2014_sparcc %>%
 
 
 # library(Matrix)
-# secor <- cov2cor(forceSymmetric(getOptCov(osd2014_16S_asv_se_gl_minus2), ifelse(sum(Matrix::tril(getOptCov(osd2014_16S_asv_se_gl_minus2)))>sum(Matrix::triu(getOptCov(osd2014_16S_asv_se_gl_minus2))), 'L', 'U')))
-# refit <- forceSymmetric(getRefit(osd2014_16S_asv_se_gl_minus2), ifelse(sum(Matrix::tril(getRefit(osd2014_16S_asv_se_gl_minus2)))>sum(Matrix::triu(getRefit(osd2014_16S_asv_se_gl_minus2))), 'L', 'U'))
-# osd2014_asv_g_gl <- adj2igraph(as.matrix(secor*refit),  vertex.attr=list(name=taxa_names(osd2014_16s_otuXsample_physeq_filt_se)))
+# secor <- cov2cor(forceSymmetric(getOptCov(osd2014_18S_asv_se_gl_minus2), ifelse(sum(Matrix::tril(getOptCov(osd2014_18S_asv_se_gl_minus2)))>sum(Matrix::triu(getOptCov(osd2014_18S_asv_se_gl_minus2))), 'L', 'U')))
+# refit <- forceSymmetric(getRefit(osd2014_18S_asv_se_gl_minus2), ifelse(sum(Matrix::tril(getRefit(osd2014_18S_asv_se_gl_minus2)))>sum(Matrix::triu(getRefit(osd2014_18S_asv_se_gl_minus2))), 'L', 'U'))
+# osd2014_asv_g_gl <- adj2igraph(as.matrix(secor*refit),  vertex.attr=list(name=taxa_names(osd2014_18S_otuXsample_physeq_filt_se)))
 # E(osd2014_asv_g_gl)$weight %>% hist
 #
 #
-# osd2014_asv_g_mb <- symBeta(getOptBeta(osd2014_16S_asv_se_mb_minus3), mode='maxabs')
-# osd2014_asv_g_mb <- adj2igraph(osd2014_asv_g_mb, vertex.attr=list(name=taxa_names(osd2014_16s_otuXsample_physeq_filt_se)))
+# osd2014_asv_g_mb <- symBeta(getOptBeta(osd2014_18S_asv_se_mb_minus3), mode='maxabs')
+# osd2014_asv_g_mb <- adj2igraph(osd2014_asv_g_mb, vertex.attr=list(name=taxa_names(osd2014_18S_otuXsample_physeq_filt_se)))
 # E(osd2014_asv_g_mb)$weight %>% hist
 #
 binary_search_filter <- function(g, low, high) {
@@ -193,16 +184,11 @@ E(g4)$weight <- abs(E(g4)$weight_orig)
 E(g4)$pvalue %>% skimr::skim()
 E(g4)$weight_orig %>% skimr::skim()
 
-
-
-
-
-
 #
 #
 # a_names <- paste("asv", 1:vcount(g3), sep = "_")
 #
-# g_taxonomy <- tax_table(osd2014_16s_otuXsample_physeq_filt_prev_beta) %>%
+# g_taxonomy <- tax_table(osd2014_18S_otuXsample_physeq_filt_prev_beta) %>%
 #   as.matrix() %>%
 #   base::as.data.frame( stringsAsFactors = FALSE) %>%
 #   rownames_to_column(var = "asv") %>%
@@ -218,16 +204,17 @@ E(g4)$weight_orig %>% skimr::skim()
 # hist(summary(symBeta(getOptBeta(osd2014_se_mb_beta), mode='ave')))
 #
 # g<-adj2igraph(se_asv_gl_1e4$opt.cov * se_asv_gl_1e4$refit)
-# a_names <- paste("asv", 1:ntaxa(osd2014_16s_otuXsample_physeq_filt_prev_beta), sep = "_")
+# a_names <- paste("asv", 1:ntaxa(osd2014_18S_otuXsample_physeq_filt_prev_beta), sep = "_")
 # #r_names <- tax_table(osd2014_resfam_physeq_se) %>% as.data.frame() %>% .$resfam_id %>% as.character()
 # #g_names <- c(a_names, r_names)
 #
 #
-# g_taxonomy <- tax_table(osd2014_16s_otuXsample_physeq_filt_prev_beta) %>%
-#   as.matrix() %>%
-#   base::as.data.frame( stringsAsFactors = FALSE) %>%
-#   rownames_to_column(var = "asv") %>%
-#   tbl_df %>%
+
+g_taxonomy <- tax_table(osd2014_dada2_phyloseq_beta) %>%
+  as.matrix() %>%
+  base::as.data.frame( stringsAsFactors = FALSE) %>%
+  rownames_to_column(var = "asv") %>%
+  tbl_df
 #   mutate(id = paste("asv", as.character(row_number()), sep = "_")) %>% select(id, asv)
 #
 
@@ -236,7 +223,7 @@ E(g4)$weight_orig %>% skimr::skim()
 g <- as_tbl_graph(g4) %>%
   activate(nodes) %>%
   mutate(asv = name) %>%
-  left_join(osd2014_silva_dada2_names) %>%
+  inner_join(g_taxonomy %>% select(asv, asv_name)) %>%
   mutate(name = asv_name) %>%
   select(-asv_name) %>%
   #filter(!node_is_isolated()) %>%
@@ -248,6 +235,7 @@ g <- as_tbl_graph(g4) %>%
   activate(nodes) %>%
   filter(!node_is_isolated())
 
+gc()
 
 # Community detection -----------------------------------------------------
 
@@ -280,7 +268,7 @@ louvain_iters <- pbmcapply::pbmclapply(seeds, r_louvain, mc.cores = 2)
 names(louvain_iters) <- paste0("iter_",1:n_iters)
 n_levels <- map_df(louvain_iters, function(X){length(X) %>% as_tibble()}, .id = "iter") %>% rename(nlevels = value)
 n_level <- mclust::majorityVote(n_levels$nlevels)
-iters <- n_levels %>% filter(nlevels >= n_level$majority)
+iters <- n_levels %>% filter(nlevels >= 1)
 louvain_iters_sel <- louvain_iters[iters$iter]
 
 coms <- map_df(louvain_iters_sel, function(X, G1){
@@ -295,6 +283,8 @@ coms <- map_df(louvain_iters_sel, function(X, G1){
 
 coms %>% filter(level == 2) %>% .$n_coms %>% skimr::skim()
 coms %>% filter(level == 3) %>% .$n_coms %>% skimr::skim()
+coms %>% filter(level == 4) %>% .$n_coms %>% skimr::skim()
+
 
 coms_unite <- coms %>%
   filter(level == 3) %>%
@@ -313,7 +303,7 @@ colnames(dis) <- c_com$initial
 dis <- as.dist(dis)
 
 library(dendextend)
-dend <-  dis %>% as.dist() %>% hclust(method = "ward.D") %>% as.dendrogram %>%  set("labels_to_character") %>% color_branches(k=8)
+dend <-  dis %>% as.dist() %>% hclust(method = "ward.D") %>% as.dendrogram %>%  set("labels_to_character") %>% color_branches(k=10)
 plot(dend)
 
 colors <- leaf_colors(dend)
@@ -327,8 +317,7 @@ g <- g %>%
   inner_join(consensus_coms %>% select(name, com))
 
 
-
-
+#V(g)$com %>% unique()
 #com_l_0 <- make_clusters(g, as.numeric(g_louvain[[1]]), algorithm = 'Louvain', modularity = TRUE)
 #com_l_1 <- make_clusters(g, as.numeric(g_louvain[[2]]), algorithm = 'Louvain', modularity = TRUE)
 #com_l_2 <- make_clusters(g, as.numeric(g_louvain[[3]]), algorithm = 'Louvain', modularity = TRUE)
@@ -338,7 +327,7 @@ g <- g %>%
 # V(gx)$com_louvain_2 <- as.character(membership(com_l_2))
 #V(g_mock)$com_louvain_3 <- as.character(membership(com_l_3))
 
-#V(g)$com <-  as.character(membership(com_l_2))
+#V(g)$com <-  as.character(membership(com_l_3))
 #V(g)$com <- as.character(membership(cluster_louvain(g, gamma = 1)))
 # g_plot <- ggraph(g)  +
 #   geom_edge_link(aes(color = sign, alpha = weight), show.legend = FALSE, width = 0.5) +
@@ -353,13 +342,13 @@ counts <- dplyr::as_data_frame(g) %>%
 g <- g %>%
   left_join(counts)
 
-g1 <- g %>%
-  select(-asv)
+g1 <- g
 
 g.c <- contract.vertices(as.igraph(g1), V(as.igraph(g1))$com,
                          vertex.attr.comb=list(name= function(x) paste(x, collapse="|"),
                                                com= function(x) unique(x),
-                                               n_mem = function(x) unique(x))
+                                               n_mem = function(x) unique(x),
+                                               asv = function(x) paste(x, collapse="|"))
 )
 
 g.c <- igraph::simplify(g.c, edge.attr.comb = list(weight = function(x) median(x),
@@ -378,7 +367,7 @@ g <- as_tbl_graph(g) %>%
   mutate(sign = ifelse(weight_orig < 0, "NEG", "POS"))
 
 #write.graph(as.igraph(g), file = "~/Downloads/test_resfam_asv.graphml", format = "graphml")
-write.graph(as.igraph(g.c), file = "osd2014_16S_asv/data/osd2014_dada_sparcc_modules.graphml", format = "graphml")
+write.graph(as.igraph(g.c), file = "osd2014_18S_asv/data/osd2014_dada_sparcc_modules.graphml", format = "graphml")
 
 
 
@@ -408,14 +397,17 @@ qpsmelt <- function(X) {
 
 
 l <- dplyr::as_data_frame(g %>% activate(nodes)) %>%
-  left_join(qpsmelt(l_p) %>% rename(asv = OTU))
+  left_join(qpsmelt(l_p) %>% dplyr::rename(asv = OTU))
 
 l$label <- factor(l$label, levels = st_100_order_terrestrial$label)
 
 l_pl <- l %>%
-  select(label, com, Abundance, Phylum) %>%
-  #filter(counts >=5) %>%
-  ggplot(aes(label, Abundance, fill = Phylum)) +
+  select(label, com, Abundance, Supergroup) %>%
+  unique() %>%
+  right_join(st_100_order_terrestrial) %>%
+  complete(label, com, Supergroup, position, fill = list(Abundance = 0)) %>%
+  filter(!is.na(com)) %>%
+  ggplot(aes(label, Abundance, fill = Supergroup)) +
   geom_bar(stat = "identity", width = 1) +
   facet_wrap(~com) +
   scale_y_continuous(labels = scales::percent) +
@@ -424,7 +416,7 @@ l_pl <- l %>%
         axis.ticks.x = element_blank()) +
   ylab("Proportion") +
   xlab("OSD samples") +
-  scale_fill_manual(values = randomcoloR::distinctColorPalette(k = l$Phylum %>% unique() %>% length()))
+  scale_fill_manual(values = randomcoloR::distinctColorPalette(k = l$Supergroup %>% unique() %>% length()))
 
 textcol <- "grey40"
 l1 <- l %>%
@@ -435,44 +427,44 @@ l1 <- l %>%
 
 
 l2 <- dplyr::as_data_frame(g %>% activate(nodes)) %>%
-  left_join(qpsmelt(osd2014_dada2_phyloseq_beta) %>% rename(asv = OTU))
+  left_join(qpsmelt(osd2014_dada2_phyloseq_beta) %>% dplyr::rename(asv = OTU))
 
 
 
 l3 <- l2 %>%
   ungroup() %>%
-  select(com, Abundance, Phylum, Class, Order) %>%
-  mutate(Phylum = paste("P:",Phylum,";O:", Order, sep = '')) %>%
-  group_by(com, Phylum) %>%
+  select(com, Abundance, Supergroup, Class, Order) %>%
+  mutate(Supergroup = paste("SG:",Supergroup,";O:", Order, sep = '')) %>%
+  group_by(com, Supergroup) %>%
   summarise( N = sum(Abundance)) %>%
   group_by(com) %>%
   mutate(prop = N/sum(N)) %>%
   ungroup() %>%
-  mutate(Phylum = ifelse(prop > 0.005 & !(grepl('O:NA', Phylum)), Phylum, "Other")) %>%
-  group_by(com, Phylum) %>%
+  mutate(Supergroup = ifelse(prop > 0.005 & !(grepl('O:NA', Supergroup)), Supergroup, "Other")) %>%
+  group_by(com, Supergroup) %>%
   summarise(prop = sum(prop)) %>%
   ungroup() %>%
-  tidyr::complete(com, Phylum)
+  tidyr::complete(com, Supergroup)
 
-
-
-com_colors <- c("#4D4D4D", #732
-                "#F15854", #700
-                "#60BD68", #548
-                "#FAA43A", #410
-                "#F17CB0", #431
-                "#5DA5DA", #379
-                "#B276B2", #351
-                "#DECF3F", #311
-                "#B2912F"  #29
+com_colors <- c( #732
+  "#a33d4a", #1
+  "#6e0334", #2
+  "#e25d3d", #3
+  "#becab0", #4
+  "#269a5c", #5
+  "#19bd2f", #6
+  "#4a9838", #7
+  "#edead9", #8
+  "#bfa386", #9
+  "#dde4b8"  #10
 )
 
 
 #colors <- sample(com_colors)
 #colors <- c("#DECF3F", "#60BD68", "#5DA5DA", "#4D4D4D", "#FAA43A", "#B2912F", "#F17CB0", "#F15854", "#B276B2")
 
-l1 <- l1 %>% mutate(label = fct_relevel(label, st_100_order_terrestrial$label)) %>% group_by(label) %>% mutate(com = fct_reorder(com, desc(N))) %>% ungroup()
-com_colors_order <- data_frame(r = seq(1,9,1), color = com_colors)
+l1 <- l1 %>% mutate(label = fct_relevel(label, st_100_order_terrestrial$label)) %>% group_by(label) %>% mutate(com = fct_reorder(com, dplyr::desc(N))) %>% ungroup() %>% tidyr::complete(label, com, fill = list(N = 0))
+com_colors_order <- data_frame(r = seq(1,10,1), color = com_colors)
 
 com_colors_order <- counts %>% ungroup %>% arrange(desc(n_mem)) %>% mutate(r = row_number(), com = paste0("com_", com)) %>%
   left_join(com_colors_order) %>% arrange(match(com, levels(l1$com)))
@@ -492,22 +484,22 @@ ggplot(l1, aes(label, N, fill = com)) +
         legend.position = "top") +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), labels = scales::percent) +
-  ylab("Mixing proportions") +
+  ylab("Proportion") +
   xlab("Samples") +
   labs(fill="")
 
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_sparcc_com_barplot.pdf", width = 11.69, height = 8.27)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_sparcc_com_barplot.pdf", width = 11.69, height = 8.27)
 
 l_d <-  l2 %>%
   ungroup() %>%
-  select(com, Abundance, Phylum, Class, Order) %>%
-  mutate(Phylum = paste("P:",Phylum,";O:", Order, sep = '')) %>%
-  group_by(com, Phylum) %>%
+  select(com, Abundance, Supergroup, Class, Order) %>%
+  mutate(Supergroup = paste("SG:",Supergroup,";O:", Order, sep = '')) %>%
+  group_by(com, Supergroup) %>%
   summarise( N = sum(Abundance)) %>%
   group_by(com) %>%
   mutate(prop = N/sum(N)) %>%
   ungroup() %>% select(-N) %>% unique() %>% spread(com, prop, fill = 0) %>%
-  column_to_rownames(var = "Phylum") %>%
+  column_to_rownames(var = "Supergroup") %>%
   as.data.frame()
 
 
@@ -520,15 +512,15 @@ l_hc_l <- hclust(vegan::vegdist(t(l_d), method = "jaccard"), method = "ward.D2")
 # l_hc_l <- hclust(1 - as.dist(cor((l_d),method = "pearson")), method = "complete")
 
 
-#o <- l3 %>% group_by(Phylum) %>% summarise(L=sum(prop, na.rm = TRUE)) %>% arrange((L)) %>% .$Phylum
-# o <- l3 %>% ungroup() %>% .$Phylum %>% unique() %>% as.character() %>% sort(decreasing = F)
+#o <- l3 %>% group_by(Supergroup) %>% summarise(L=sum(prop, na.rm = TRUE)) %>% arrange((L)) %>% .$Supergroup
+# o <- l3 %>% ungroup() %>% .$Supergroup %>% unique() %>% as.character() %>% sort(decreasing = F)
 # p <- l3 %>% group_by(com) %>% summarise(L=sum(prop, na.rm = TRUE)) %>% arrange(desc(L)) %>% .$com
 #
-# l3$Phylum <- factor(l3$Phylum, levels = o)
+# l3$Supergroup <- factor(l3$Supergroup, levels = o)
 #l3$com <- factor(l3$com, levels = p)
 
 l3$com <- factor(l3$com, levels = l_hc_l$labels[l_hc_l$order])
-l3$Phylum <- factor(l3$Phylum, levels =l_hc$labels[l_hc$order])
+l3$Supergroup <- factor(l3$Supergroup, levels =l_hc$labels[l_hc$order])
 base_breaks <- function(n = 10){
   function(x) {
     axisTicks(log10(range(x, na.rm = TRUE)), log = TRUE, n = n)
@@ -537,7 +529,7 @@ base_breaks <- function(n = 10){
 cols <- c(colorRampPalette(c("#e7f0fa", "#c9e2f6", "#95cbee", "#0099dc", "#4ab04a", "#ffd73e"))(10),
           colorRampPalette(c("#eec73a", "#e29421", "#e29421", "#f05336","#ce472e"), bias=9)(90))
 
-p1 <- ggplot(l3 %>% mutate(prop = ifelse(is.na(prop), 0.00001, prop)), aes(x=Phylum,y=com, fill = prop))+
+p1 <- ggplot(l3 %>% mutate(prop = ifelse(is.na(prop), 0.00001, prop)), aes(x=Supergroup,y=com, fill = prop))+
   geom_tile()+
   #redrawing tiles to remove cross lines from legend
   geom_tile(colour="gray30",size=0.3, show.legend = FALSE, na.rm = TRUE)+
@@ -594,7 +586,7 @@ p1 <- ggplot(l3 %>% mutate(prop = ifelse(is.na(prop), 0.00001, prop)), aes(x=Phy
 
 p2 <- g %>%
   tidygraph::activate(nodes) %>%
-  left_join(results %>% select(OTU, sign) %>% unique() %>% rename(asv = OTU)) %>%
+  left_join(results %>% select(OTU, sign) %>% unique() %>% dplyr::rename(asv = OTU)) %>%
   dplyr::as_data_frame() %>%
   dplyr::select(com, sign) %>%
   group_by(com,  sign) %>%
@@ -646,7 +638,7 @@ p2 <- g %>%
 
 ggpubr::ggarrange(p1, p2, nrow = 1, widths = c(0.7, 0.3), common.legend = F, ncol = 2)
 
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_sparcc_com_heatmap.pdf", width = 11.69, height = 8.27)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_sparcc_com_heatmap.pdf", width = 11.69, height = 8.27)
 
 
 # Plot the relationship between communities -------------------------------
@@ -724,14 +716,14 @@ pg2 <- ggplot() +
   scale_fill_manual(values = com_colors_order %>% arrange(match(com, levels(gc1_nodes$com))) %>% .$color)
 
 ggpubr::ggarrange(pg1,pg2, nrow = 2, ncol = 1, common.legend = T)
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_sparcc_com_arcplot.pdf", width = 11.69, height = 8.27)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_sparcc_com_arcplot.pdf", width = 11.69, height = 8.27)
 
 # Calculate eigengenes
 library(WGCNA)
 mat <- (otu_table(osd2014_dada2_phyloseq_beta))
 df_nodes <- dplyr::as_data_frame(g %>% activate(nodes)) %>%
-  select(name, asv, com) %>%
-  slice(match(colnames(mat), asv))
+  dplyr::select(name, asv, com) %>%
+  dplyr::slice(match(colnames(mat), asv))
 colnames(mat) <- df_nodes$name
 PCs <- WGCNA::moduleEigengenes(mat, colors=df_nodes$com)
 ME <- PCs$eigengenes
@@ -752,77 +744,24 @@ osd2014_adata <- osd2014_mld_adata %>%
   left_join(osd2014_woa13_adata) %>%
   left_join(osd2014_iron_adata) %>%
   #left_join(osd2014_halpern_adata) %>%
-  left_join(osd2014_rescaled_2013_median_long) %>%
-  left_join(osd2014_sample_cohesion)
+  left_join(osd2014_rescaled_2013_median_long)
 
 
 osd2014_eigen_cor <- osd2014_metadata %>% select(label, start_lat, start_lon) %>%
   #left_join(osd2014_halpern_adata)  %>%
-  left_join(osd2014_adata) %>%
+  inner_join(osd2014_adata) %>%
   gather(variable, value, -label) %>%
-  right_join(ME %>% dplyr::as_data_frame() %>% rownames_to_column(var = "label") %>% gather(com, eigengene, -label)
+  inner_join(ME %>% dplyr::as_data_frame() %>% rownames_to_column(var = "label") %>% gather(com, eigengene, -label)
   ) %>%
   mutate(value =  as.numeric(value), com = gsub("ME", "", com)) %>%
   group_by(com, variable) %>%
   do(tidy(Hmisc::rcorr(.$eigengene, .$value))) %>%
   ungroup() %>%
-  filter(n > 110) %>%
+  filter(n > 100) %>%
   mutate(p.value.adj.bh = p.adjust(p.value, method = 'BH'),
          p.value.adj.holm = p.adjust(p.value, method = 'holm'),
          p.value.adj.fdr = p.adjust(p.value, method = 'fdr'))
 
-
-
-# osd2014_data4mic <- osd2014_metadata %>% select(label, start_lat, start_lon) %>%
-#   #left_join(osd2014_halpern_adata)  %>%
-#   left_join(osd2014_adata) %>%
-#   gather(variable, value, -label) %>%
-#   right_join(ME %>% dplyr::as_data_frame() %>% rownames_to_column(var = "label") %>% gather(com, eigengene, -label)
-#   ) %>%
-#   mutate(value =  as.numeric(value), com = gsub("ME", "", com))
-#
-# mic_vars <- osd2014_data4mic %>%
-#   drop_na() %>%
-#   select(variable, com) %>%
-#   group_by(com, variable) %>%
-#   count() %>%
-#   filter(n > 110)# %>% complete(variable, com)
-#
-#
-#
-# mic_cor <- function(X, data = data, vars = vars, p.opt = "MC"){
-#   a <- data %>% filter(variable == vars[X,]$variable, com == vars[X,]$com) %>% drop_na()
-#   if (nrow(a) > 0){
-#     pvalue <- testforDEP(a$eigengene, a$value, test = "MIC", rm.na = TRUE, p.opt = p.opt)@p_value
-#     mine(a$eigengene, a$value, use = 'pairwise.complete.obs') %>% as_tibble() %>% mutate(pvalue = pvalue, com = vars[X,]$com, variable = vars[X,]$variable)
-#   }
-# }
-#
-# osd2014_eigen_cor_mic <- pbmcapply::pbmclapply(1:nrow(mic_vars), mic_cor, vars = mic_vars, data = osd2014_data4mic, mc.cores = 1)
-#
-# osd2014_eigen_cor_mic_filt <- do.call("rbind", osd2014_eigen_cor_mic) %>% as_tibble()  %>%
-#   mutate(p.value.adj.bh = p.adjust(pvalue, method = 'BH'),
-#          p.value.adj.holm = p.adjust(pvalue, method = 'holm'),
-#          p.value.adj.fdr = p.adjust(pvalue, method = 'fdr')) %>%
-#   filter(p.value.adj.bh < 0.001) %>%
-#   mutate(type = ifelse(`MIC-R2` > 0.2, "non-linear", "linear"))
-#
-#
-# osd2014_eigen_cor_mic_filt %>%
-#   ggplot(aes(MIC)) +
-#   geom_density(fill = "grey") +
-#   theme_bw()
-#
-# osd2014_eigen_cor_mic_filt %>%
-#   ggplot(aes(`MIC-R2`)) +
-#   geom_density(fill = "grey") +
-#   theme_bw()
-
-
-# analyses were run using CV=0.5, B=0.6, and statistically significant relationships with 595
-# MIC ≥0.4 (Malaspina) or MIC ≥0.5 (TARA) were considered; significance was 596
-# assessed using precomputed p-values (38). Non-linear associations were defined as 597
-# MIC-⍴2 >0.2 (38). Secondly, we constructed association networks with the Malaspina
 
 
 osd2014_eigen_cor_filt <- osd2014_eigen_cor %>%
@@ -830,9 +769,7 @@ osd2014_eigen_cor_filt <- osd2014_eigen_cor %>%
   select(com, variable, estimate, contains("p.val")) %>%
   complete(com, variable) %>%
   mutate(estimate = ifelse(p.value.adj.bh < 0.001, estimate, NA), com = fct_relevel(com,  rev(l_hc_l$labels[l_hc_l$order]))) %>%
-  group_by(variable) %>%
-  mutate(nas = sum(is.na(estimate))) %>%
-  filter(nas != 8) %>% ungroup()
+  group_by(variable) %>% mutate(nas = sum(is.na(estimate))) %>% filter(nas != 10) %>% ungroup()
 
 osd2014_eigen_cor_filt$value<-cut(osd2014_eigen_cor_filt$estimate,breaks=c(-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1),include.lowest=TRUE,label=c("(-1,-0.75)","(-0.75,-0.5)","(-0.5,-0.25)","(-0.25,0)","(0,0.25)","(0.25,0.5)","(0.5,0.75)","(0.75,1)")) # this can be customized to put the correlations in categories using the "cut" function with appropriate labels to show them in the legend, this column now would be discrete and not continuous
 
@@ -921,9 +858,9 @@ ggplot(osd2014_eigen_cor_filt %>% mutate(variable = fct_relevel(variable, rev(os
     #remove plot border
     panel.border=element_blank())
 
-ggsave(plot = last_plot(), filename = "osd2014_16S_asv/figures/osd2014_sparcc_com_cor.pdf", width = 11.69, height = 8.27)
+ggsave(plot = last_plot(), filename = "osd2014_18S_asv/figures/osd2014_sparcc_com_cor.pdf", width = 11.69, height = 8.27)
 
 # BEGIN: Save objects ------------------------------------------------------------
 # WARNING!!! You might not want to run this code --------------------------
-save.image("osd2014_16S_asv/data/osd2014_16S_asv_networks_results.Rdata")
+save.image("osd2014_18S_asv/data/osd2014_18S_asv_networks_results.Rdata")
 # END: Save objects ------------------------------------------------------------
